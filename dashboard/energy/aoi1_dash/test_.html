@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+</head>
+<body>
+  <div id="myChart" style="width:100%;height:500px;"></div>
+
+  <script>
+    // Data per menit (1 hari = 1440 titik)
+    let time = [];
+    let values = [];
+    let today = new Date();
+
+    for (let i = 0; i < 1440; i++) {
+      let t = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, i, 0);
+      time.push(t);
+      values.push(Math.random() * 100);
+    }
+
+    let trace = {
+      x: time,
+      y: values,
+      mode: 'lines',
+      name: 'Konsumsi',
+      line: { color: 'red' }
+    };
+
+    let layout = {
+      title: 'Grafik Konsumsi Listrik per Menit',
+      xaxis: {
+        type: 'date',
+        rangeselector: {
+          buttons: [
+            { count: 6, label: '6h', step: 'hour', stepmode: 'backward' },
+            { count: 12, label: '12h', step: 'hour', stepmode: 'backward' },
+            { count: 1, label: '1d', step: 'day', stepmode: 'backward' },
+            { step: 'all', label: 'All' }
+          ]
+        }
+      },
+      yaxis: { title: 'Watt' },
+      updatemenus: [{
+        buttons: [
+          {
+            args: [{
+              'xaxis.range': [time[0], time[time.length - 1]], // reset ke full 1 hari
+              'yaxis.autorange': true
+            }],
+            label: 'Reset View',
+            method: 'relayout'
+          }
+        ],
+        direction: 'left',
+        pad: { r: 10, t: 10 },
+        showactive: false,
+        type: 'buttons',
+        x: 0.15,   // posisi tombol
+        xanchor: 'left',
+        y: 1.15,
+        yanchor: 'top'
+      }]
+    };
+
+    Plotly.newPlot('myChart', [trace], layout, {scrollZoom: true});
+  </script>
+</body>
+</html>
