@@ -208,7 +208,8 @@
       (function() {
         var mqtt;
         var reconnectTimeout = 5000;
-        var host = "192.168.51.40";
+        // var host = "192.168.51.40";
+        var host = "localhost";
         var port = 8083;
         var connected_flag = 0;
 

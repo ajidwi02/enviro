@@ -266,7 +266,7 @@ foreach ($sensor_configs as $cfg) {
             </div> <!-- .col-md-6 -->
 
             <script>
-            // Register Standard Values for ID <?php echo $id_location; ?>
+            /* Register Standard Values for ID <?php echo $id_location; ?> */
             standard_values['<?php echo $id_location; ?>'] = {
                 'min_value_temp': <?php echo floatval($std['min_value_temp']); ?>,
                 'max_red_temp': <?php echo floatval($std['max_red_temp']); ?>,
@@ -459,7 +459,8 @@ foreach ($sensor_configs as $cfg) {
     <script type="text/javascript">
     var mqtt;
     var reconnectTimeout = 5000;
-    var host = "192.168.51.40";
+    // var host = "192.168.51.40";
+    var host = window.location.hostname || "localhost";
     var port = 8083;
     var connected_flag = 0;
 
