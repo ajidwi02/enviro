@@ -101,7 +101,7 @@ if (isset($_GET["submit"]) && !empty($_GET['range'])) {
                         filename: 'Report_Temp_Humid_AOI5_' + new Date().toISOString().slice(0,10)
                     }
                 ],
-                order: [[5, 'desc']]
+                order: [[6, 'desc']]
             });
 
             empDataTable.on('order.dt search.dt', function () {
@@ -231,12 +231,12 @@ if (isset($_GET["submit"]) && !empty($_GET['range'])) {
                                 $rec_time = $row['record_time'];
                                 $dayname = $row['day_name'];
                                 
-                                // Tentukan Location Name
+                                // Tentukan Location Name (Folding Area / Dry Room)
                                 $loc_lower = strtolower($id_loc);
                                 if ($loc_lower == '501' || $loc_lower == 'temp1' || $loc_lower == 'area501' || $loc_lower == 'area_1' || $loc_lower == 'area1') {
-                                    $loc_name = 'Sensor 1 - Temp & Humid AOI 5';
+                                    $loc_name = 'Sensor 1 - Folding Area';
                                 } elseif ($loc_lower == '502' || $loc_lower == 'temp2' || $loc_lower == 'area502' || $loc_lower == 'area_2' || $loc_lower == 'area2') {
-                                    $loc_name = 'Sensor 2 - Temp & Humid AOI 5';
+                                    $loc_name = 'Sensor 2 - Dry Room';
                                 } else {
                                     $loc_name = 'Sensor ' . $id_loc . ' - AOI 5';
                                 }

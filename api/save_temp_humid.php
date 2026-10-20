@@ -58,14 +58,20 @@ if (!empty($data['id_location'])) {
     $raw_location = trim($_GET['sensor']);
 }
 
-// Mapping nama sensor area501/area502/temp1/temp2/Area_1/Area_2 ke ID numeric (501 / 502)
+// Mapping nama sensor area501/area502/Area_1/Area_2 ke ID numeric (501 / 502)
 $loc_lower = strtolower($raw_location);
-if (strpos($loc_lower, '502') !== false || strpos($loc_lower, 'temp2') !== false || strpos($loc_lower, 'area_2') !== false || strpos($loc_lower, 'area2') !== false) {
+if (strpos($loc_lower, '502') !== false || strpos($loc_lower, 'area_2') !== false || strpos($loc_lower, 'area2') !== false) {
     $id_location = '502';
-} elseif (strpos($loc_lower, '501') !== false || strpos($loc_lower, 'temp1') !== false || strpos($loc_lower, 'area_1') !== false || strpos($loc_lower, 'area1') !== false) {
+} elseif (strpos($loc_lower, '501') !== false || strpos($loc_lower, 'area_1') !== false || strpos($loc_lower, 'area1') !== false) {
     $id_location = '501';
 } else {
-    $id_location = !empty($raw_location) ? $raw_location : '501';
+    // Tolak jika bukan sensor milik AOI 5
+    echo json_encode([
+        'status' => 'ignored',
+        'message' => 'Sensor location not recognized for AOI 5 (expected 501/Area_1 or 502/Area_2)',
+        'received_location' => $raw_location
+    ]);
+    exit;
 }
 
 // 2.1 Ekstrak Nilai Suhu (Temperature)
@@ -150,7 +156,22 @@ if (!$is_forced) {
         $last_row = mysqli_fetch_assoc($check_res);
         $last_timestamp = strtotime($last_row['record_time']);
         $curr_timestamp = strtotime($record_time);
-        $diff_seconds = abs($curr_timestamp - $last_timestamp);
+
+        // Abaikan jika timestamp payload lebih lampau atau sama dengan data terakhir di database
+        if ($curr_timestamp <= $last_timestamp) {
+            echo json_encode([
+                'status' => 'skipped',
+                'message' => 'Stale data: Payload timestamp is older than or equal to last record in database',
+                'data' => [
+                    'id_location'      => $safe_id_loc,
+                    'last_record_time' => $last_row['record_time'],
+                    'current_time'     => $safe_record_time
+                ]
+            ]);
+            exit;
+        }
+
+        $diff_seconds = $curr_timestamp - $last_timestamp;
 
         // Jika kurang dari 1 jam (3600 detik), skip penyimpanan
         if ($diff_seconds < 3600) {

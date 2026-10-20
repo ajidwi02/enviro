@@ -27,9 +27,9 @@ Sistem ini mencakup 5 pilar utama:
 | :--- | :--- | :--- |
 | **Factory Target** | `AOI 5` | Area pabrik AOI 5 |
 | **Jumlah Sensor** | 2 Sensor | Sensor 1 (`501` / `area501`) dan Sensor 2 (`502` / `area502`) |
-| **Topic MQTT Sensor 1** | `data/temperature/area501/+`, `data/humidity/area501/+`, dll | Topic data Sensor 1 (Area 1) |
-| **Topic MQTT Sensor 2** | `data/temperature/area502/+`, `data/humidity/area502/+`, dll | Topic data Sensor 2 (Area 2) |
-| **Format Payload MQTT** | JSON Object | `{"_terminalTime":"2026-10-01 07:51:00.392","_groupName":"Area_1","temper":"31.5","humidi":"61.2"}` |
+| **Topic MQTT Sensor 1** | `data/temperature/area501/+` | Topik data Sensor 1 (Area 1 / Folding Area) |
+| **Topic MQTT Sensor 2** | `data/temperature/area502/+` | Topik data Sensor 2 (Area 2 / Dry Room) |
+| **Format Payload MQTT** | JSON Object | `{"_terminalTime":"2026-10-20 15:18:43.154","_groupName":"Area_1","temper":"29.2","humidi":"49.7"}` |
 | **Pembaruan Visual Dashboard** | **Real-Time (Instan)** | Jarum gauge Highcharts langsung bergerak seketika setiap ada payload masuk |
 | **Interval Penyimpanan DB** | **Setiap 1 Jam (60 Menit)** | Backend API Hourly Guard (skip request jika selisih < 3600 detik) |
 | **Mekanisme Background 24/7** | **EMQX Data Bridge (HTTP Server)** | EMQX Webhook langsung ke `api/save_temp_humid.php` (tanpa browser) |
@@ -121,15 +121,15 @@ Struktur 5 kolom utama pada tabel `temp_humid`:
 
 ### B. Contoh Pengujian Kirim Data MQTT
 Kirim payload berikut ke broker EMQX `192.168.51.40`:
-* **Topik Sensor 1:** `data/temperature/area501/state` (atau subtopic lainnya dengan prefix `data/temperature/area501/`)  
-  **Payload:**
+* **Topik Sensor 1 (Area 1 / Folding Area):** `data/temperature/area501/+` (Contoh: `data/temperature/area501/7122659134180131095`)  
+  **Payload PLC Sensor 1:**
   ```json
-  {"_terminalTime":"2026-10-01 07:51:00.392","_groupName":"Area_1","temper":"31.5","humidi":"61.2"}
+  {"_terminalTime":"2026-10-20 15:18:43.154","_groupName":"Area_1","temper":"29.2","humidi":"49.7"}
   ```
-* **Topik Sensor 2:** `data/temperature/area502/state` (atau subtopic lainnya dengan prefix `data/temperature/area502/`)  
-  **Payload:**
+* **Topik Sensor 2 (Area 2 / Dry Room):** `data/temperature/area502/+` (Contoh: `data/temperature/area502/7122659134180131095`)  
+  **Payload PLC Sensor 2:**
   ```json
-  {"_terminalTime":"2026-10-01 07:51:00.392","_groupName":"Area_2","temper":"29.8","humidi":"65.4"}
+  {"_terminalTime":"2026-10-20 15:18:43.255","_groupName":"Area_2","temper":"28.2","humidi":"51.4"}
   ```
 
 ---

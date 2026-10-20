@@ -242,28 +242,10 @@
 
         function sub_topics() {
           if (connected_flag === 0) return false;
+          // Topik sensor PLC AOI 5
           var topics = [
             "data/temperature/area501/+",
-            "data/temperature/area501/#",
-            "data/temperature/area501",
-            "data/temperature/area502/+",
-            "data/temperature/area502/#",
-            "data/temperature/area502",
-            "data/humidity/area501/+",
-            "data/humidity/area501/#",
-            "data/humidity/area501",
-            "data/humidity/area502/+",
-            "data/humidity/area502/#",
-            "data/humidity/area502",
-            "data/temp_humid/#",
-            "data/temperature/temp1",
-            "data/temperature/temp2",
-            "data/humidity/temp1",
-            "data/humidity/temp2",
-            "data/temperature/+",
-            "data/humidity/+",
-            "+/temperature/area501/+",
-            "+/temperature/area502/+"
+            "data/temperature/area502/+"
           ];
 
           topics.forEach(function(tp) {
@@ -305,18 +287,24 @@
             var hum_val  = (raw_hum !== undefined && !isNaN(parseFloat(raw_hum))) ? Math.round(parseFloat(raw_hum) * 10) / 10 : null;
             var time_val = data._terminalTime || data.record_time || new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-            var locId = '501';
+            // Identifikasi sensor: 501 (Area_1) atau 502 (Area_2)
+            var locId = null;
             var topic_lower = topic.toLowerCase();
-            if (topic_lower.indexOf('area502') !== -1 || topic_lower.indexOf('502') !== -1 || topic_lower.indexOf('temp2') !== -1) {
+            if (topic_lower.indexOf('area502') !== -1 || topic_lower.indexOf('502') !== -1) {
               locId = '502';
-            } else if (topic_lower.indexOf('area501') !== -1 || topic_lower.indexOf('501') !== -1 || topic_lower.indexOf('temp1') !== -1) {
+            } else if (topic_lower.indexOf('area501') !== -1 || topic_lower.indexOf('501') !== -1) {
               locId = '501';
-            } else if (data._groupName && (data._groupName.toLowerCase().indexOf('area_2') !== -1 || data._groupName.toLowerCase().indexOf('area2') !== -1)) {
+            } else if (data._groupName && (data._groupName.indexOf('Area_2') !== -1 || data._groupName.indexOf('area_2') !== -1 || data._groupName.indexOf('area2') !== -1)) {
               locId = '502';
-            } else if (data._groupName && (data._groupName.toLowerCase().indexOf('area_1') !== -1 || data._groupName.toLowerCase().indexOf('area1') !== -1)) {
+            } else if (data._groupName && (data._groupName.indexOf('Area_1') !== -1 || data._groupName.indexOf('area_1') !== -1 || data._groupName.indexOf('area1') !== -1)) {
               locId = '501';
             } else if (data.id_location) {
-              locId = topic_map[data.id_location] || data.id_location;
+              locId = topic_map[data.id_location] || null;
+            }
+
+            // Jika bukan topik / sensor milik AOI 5, abaikan
+            if (!locId) {
+              return;
             }
 
             // Simpan otomatis hanya jika interval sudah 1 jam

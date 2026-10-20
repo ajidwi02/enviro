@@ -501,29 +501,10 @@ foreach ($sensor_configs as $cfg) {
     function sub_topics() {
         if (connected_flag == 0) return false;
 
-        // Subscribing to AOI 5 temperature & humidity topics (Comprehensive Wildcards)
+        // Subscribing to AOI 5 temperature & humidity PLC topics
         var topics = [
             "data/temperature/area501/+",
-            "data/temperature/area501/#",
-            "data/temperature/area501",
-            "data/temperature/area502/+",
-            "data/temperature/area502/#",
-            "data/temperature/area502",
-            "data/humidity/area501/+",
-            "data/humidity/area501/#",
-            "data/humidity/area501",
-            "data/humidity/area502/+",
-            "data/humidity/area502/#",
-            "data/humidity/area502",
-            "data/temp_humid/#",
-            "data/temperature/temp1",
-            "data/temperature/temp2",
-            "data/humidity/temp1",
-            "data/humidity/temp2",
-            "data/temperature/+",
-            "data/humidity/+",
-            "+/temperature/area501/+",
-            "+/temperature/area502/+"
+            "data/temperature/area502/+"
         ];
 
         topics.forEach(function(tp) {
@@ -544,7 +525,7 @@ foreach ($sensor_configs as $cfg) {
             console.log("MQTT Msg Arrived:", topic, payloadStr);
 
             // Parsing JSON Output
-            // Format: {"_terminalTime":"2026-10-01 07:51:00.392","_groupName":"Area_1","temper":"31.5","humidi":"61.2"}
+            // Format PLC: {"_terminalTime":"2026-10-20 15:18:43.154","_groupName":"Area_1","temper":"29.2","humidi":"49.7"}
             var data = JSON.parse(payloadStr);
 
             // Dukungan jika payload bersarang (nested payload)
@@ -556,13 +537,13 @@ foreach ($sensor_configs as $cfg) {
                 }
             }
 
-            // Ekstrak temperature secara fleksibel (temper, temp, temperature)
+            // Ekstrak temperature (temper, temp, temperature)
             var raw_temp = undefined;
             if (data.temper !== undefined && data.temper !== null) raw_temp = data.temper;
             else if (data.temp !== undefined && data.temp !== null) raw_temp = data.temp;
             else if (data.temperature !== undefined && data.temperature !== null) raw_temp = data.temperature;
 
-            // Ekstrak humidity secara fleksibel (humidi, humidity, hum, rh, kelembapan)
+            // Ekstrak humidity (humidi, humidity, hum, rh, kelembapan)
             var raw_hum = undefined;
             if (data.humidi !== undefined && data.humidi !== null) raw_hum = data.humidi;
             else if (data.humidity !== undefined && data.humidity !== null) raw_hum = data.humidity;
@@ -574,26 +555,31 @@ foreach ($sensor_configs as $cfg) {
             var hum_val  = (raw_hum !== undefined && !isNaN(parseFloat(raw_hum))) ? Math.round(parseFloat(raw_hum) * 10) / 10 : null;
             var time_val = data._terminalTime || data.record_time || new Date().toLocaleTimeString();
 
-            // Ekstrak sensor key / location ID dari topik atau payload
-            var locId = '501';
-            var sensorKey = 'area501';
+            // Ekstrak sensor: 501 (Area_1) atau 502 (Area_2)
+            var locId = null;
+            var sensorKey = null;
             var topic_lower = topic.toLowerCase();
 
-            if (topic_lower.indexOf('area502') !== -1 || topic_lower.indexOf('502') !== -1 || topic_lower.indexOf('temp2') !== -1) {
+            if (topic_lower.indexOf('area502') !== -1 || topic_lower.indexOf('502') !== -1) {
                 locId = '502';
                 sensorKey = 'area502';
-            } else if (topic_lower.indexOf('area501') !== -1 || topic_lower.indexOf('501') !== -1 || topic_lower.indexOf('temp1') !== -1) {
+            } else if (topic_lower.indexOf('area501') !== -1 || topic_lower.indexOf('501') !== -1) {
                 locId = '501';
                 sensorKey = 'area501';
-            } else if (data._groupName && (data._groupName.toLowerCase().indexOf('area_2') !== -1 || data._groupName.toLowerCase().indexOf('area2') !== -1)) {
+            } else if (data._groupName && (data._groupName.indexOf('Area_2') !== -1 || data._groupName.indexOf('area_2') !== -1 || data._groupName.indexOf('area2') !== -1)) {
                 locId = '502';
                 sensorKey = 'area502';
-            } else if (data._groupName && (data._groupName.toLowerCase().indexOf('area_1') !== -1 || data._groupName.toLowerCase().indexOf('area1') !== -1)) {
+            } else if (data._groupName && (data._groupName.indexOf('Area_1') !== -1 || data._groupName.indexOf('area_1') !== -1 || data._groupName.indexOf('area1') !== -1)) {
                 locId = '501';
                 sensorKey = 'area501';
             } else if (data.id_location) {
-                locId = topic_to_location[data.id_location] || data.id_location;
+                locId = topic_to_location[data.id_location] || null;
                 sensorKey = locId;
+            }
+
+            // Jika bukan sensor milik AOI 5, abaikan
+            if (!locId) {
+                return;
             }
 
             // 1. UPDATE GAUGE SUHU SECARA INSTAN / REAL-TIME
