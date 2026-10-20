@@ -8,18 +8,25 @@ $to_display = "";
 
 if (isset($_GET["submit"]) && !empty($_GET['range'])) {
     $aRanges = explode(' to ', $_GET['range']);
-    $range1 = trim($aRanges[0]);
-    $range2 = isset($aRanges[1]) ? trim($aRanges[1]) : $range1;
+    $range1_raw = trim($aRanges[0]);
+    $range2_raw = isset($aRanges[1]) ? trim($aRanges[1]) : $range1_raw;
     
+    // Sanitasi tanggal secara ketat (format YYYY-MM-DD)
+    $range1 = date('Y-m-d', strtotime($range1_raw));
+    $range2 = date('Y-m-d', strtotime($range2_raw));
+
     $from_display = date("d M Y", strtotime($range1));
     $to_display = date("d M Y", strtotime($range2));
+
+    $safe_range1 = mysqli_real_escape_string($conn, $range1);
+    $safe_range2 = mysqli_real_escape_string($conn, $range2);
 
     $report_sql = "SELECT id_transaction, id_location, temp, humidity, record_time, 
                           DATE_FORMAT(record_time, '%W') AS day_name,
                           DATE(record_time) AS date_only 
                    FROM temp_humid 
                    WHERE (id_location IN ('501', '502', 'area501', 'area502', 'Area_1', 'Area_2', 'temp1', 'temp2')) 
-                     AND DATE(record_time) BETWEEN '$range1' AND '$range2' 
+                     AND DATE(record_time) BETWEEN '$safe_range1' AND '$safe_range2' 
                    ORDER BY record_time DESC";
     $result_report = mysqli_query($conn, $report_sql);
 } else {
@@ -122,7 +129,7 @@ if (isset($_GET["submit"]) && !empty($_GET['range'])) {
         <nav class="vertnav navbar navbar-light">
           <!-- Start Logo -->
           <div class="w-100 mb-4 d-flex">
-            <img src="http://smartagv.aoi.co.id/machine_control/logo.png" width="160" alt="Logo">
+            <img src="../../../logo_aoi.png" width="160" alt="Logo AOI">
           </div>
           <!-- End Logo -->
 
