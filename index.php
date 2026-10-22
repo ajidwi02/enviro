@@ -40,7 +40,7 @@
 		<nav class="vertnav navbar navbar-light">
 		  <!-- Start Logo -->
 		  <div class="w-100 mb-4 d-flex">
-			<img src="http://smartagv.aoi.co.id/machine_control/logo.png" width="160">
+			<img src="logo_aoi.png" width="160" alt="Logo AOI">
 		  </div>
 		  <!-- End Logo -->
 
@@ -243,16 +243,10 @@
 
         function sub_topics() {
           if (connected_flag === 0) return false;
+          // Topik sensor PLC AOI 5
           var topics = [
             "data/temperature/area501/+",
-            "data/temperature/area501/#",
-            "data/temperature/area501",
-            "data/temperature/area502/+",
-            "data/temperature/area502/#",
-            "data/temperature/area502",
-            "data/temperature/temp1",
-            "data/temperature/temp2",
-            "data/temperature/+"
+            "data/temperature/area502/+"
           ];
 
           topics.forEach(function(tp) {
@@ -261,41 +255,82 @@
           return false;
         }
 
+        var ONE_HOUR_MS = 60 * 60 * 1000;
+
         function onMessageArrived(r_message) {
           try {
             var topic = r_message.destinationName || "";
             var payloadStr = r_message.payloadString || "{}";
 
             var data = JSON.parse(payloadStr);
-            var temp_val = Math.round(parseFloat(data.temper !== undefined ? data.temper : data.temp) * 10) / 10;
-            var hum_val  = Math.round(parseFloat(data.humidi !== undefined ? data.humidi : data.humidity) * 10) / 10;
-            var time_val = data._terminalTime || data.record_time || new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-            var locId = '501';
-            if (topic.indexOf('area502') !== -1 || topic.indexOf('502') !== -1 || topic.indexOf('temp2') !== -1) {
-              locId = '502';
-            } else if (topic.indexOf('area501') !== -1 || topic.indexOf('501') !== -1 || topic.indexOf('temp1') !== -1) {
-              locId = '501';
-            } else if (data._groupName && (data._groupName.toLowerCase().indexOf('area_2') !== -1 || data._groupName.toLowerCase().indexOf('area2') !== -1)) {
-              locId = '502';
-            } else if (data._groupName && (data._groupName.toLowerCase().indexOf('area_1') !== -1 || data._groupName.toLowerCase().indexOf('area1') !== -1)) {
-              locId = '501';
-            } else if (data.id_location) {
-              locId = topic_map[data.id_location] || data.id_location;
+            if (data && data.payload) {
+              if (typeof data.payload === 'string') {
+                try { data = JSON.parse(data.payload); } catch(ex) {}
+              } else if (typeof data.payload === 'object') {
+                data = data.payload;
+              }
             }
 
-            // Simpan otomatis ke server via API api/save_temp_humid.php
-            saveToDatabase(locId, temp_val, hum_val, time_val);
+            var raw_temp = undefined;
+            if (data.temper !== undefined && data.temper !== null) raw_temp = data.temper;
+            else if (data.temp !== undefined && data.temp !== null) raw_temp = data.temp;
+            else if (data.temperature !== undefined && data.temperature !== null) raw_temp = data.temperature;
+
+            var raw_hum = undefined;
+            if (data.humidi !== undefined && data.humidi !== null) raw_hum = data.humidi;
+            else if (data.humidity !== undefined && data.humidity !== null) raw_hum = data.humidity;
+            else if (data.hum !== undefined && data.hum !== null) raw_hum = data.hum;
+            else if (data.rh !== undefined && data.rh !== null) raw_hum = data.rh;
+            else if (data.kelembapan !== undefined && data.kelembapan !== null) raw_hum = data.kelembapan;
+
+            var temp_val = (raw_temp !== undefined && !isNaN(parseFloat(raw_temp))) ? Math.round(parseFloat(raw_temp) * 10) / 10 : null;
+            var hum_val  = (raw_hum !== undefined && !isNaN(parseFloat(raw_hum))) ? Math.round(parseFloat(raw_hum) * 10) / 10 : null;
+            var time_val = data._terminalTime || data.record_time || new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+            // Identifikasi sensor: 501 (Area_1) atau 502 (Area_2)
+            var locId = null;
+            var topic_lower = topic.toLowerCase();
+            if (topic_lower.indexOf('area502') !== -1 || topic_lower.indexOf('502') !== -1) {
+              locId = '502';
+            } else if (topic_lower.indexOf('area501') !== -1 || topic_lower.indexOf('501') !== -1) {
+              locId = '501';
+            } else if (data._groupName && (data._groupName.indexOf('Area_2') !== -1 || data._groupName.indexOf('area_2') !== -1 || data._groupName.indexOf('area2') !== -1)) {
+              locId = '502';
+            } else if (data._groupName && (data._groupName.indexOf('Area_1') !== -1 || data._groupName.indexOf('area_1') !== -1 || data._groupName.indexOf('area1') !== -1)) {
+              locId = '501';
+            } else if (data.id_location) {
+              locId = topic_map[data.id_location] || null;
+            }
+
+            // Jika bukan topik / sensor milik AOI 5, abaikan
+            if (!locId) {
+              return;
+            }
+
+            // Simpan otomatis hanya jika interval sudah 1 jam
+            checkAndSaveHourly(locId, temp_val, hum_val, time_val);
           } catch (e) {
             console.error("[Background MQTT] Error parsing payload:", e);
+          }
+        }
+
+        function checkAndSaveHourly(locId, temp, hum, recTime) {
+          var now = Date.now();
+          var storageKey = 'enviro_aoi5_last_save_' + locId;
+          var lastSaved = parseInt(localStorage.getItem(storageKey) || '0', 10);
+
+          if (now - lastSaved >= ONE_HOUR_MS) {
+            localStorage.setItem(storageKey, now.toString());
+            saveToDatabase(locId, temp, hum, recTime);
           }
         }
 
         function saveToDatabase(locId, temp, hum, recTime) {
           var payload = {
             id_location: locId,
-            temp: temp,
-            humidity: hum,
+            temp: temp !== null ? temp : 0,
+            humidity: hum !== null ? hum : 0,
             record_time: recTime
           };
 
@@ -307,9 +342,9 @@
           .then(function(res) { return res.json(); })
           .then(function(result) {
             if (result.status === 'success') {
-              console.log("[Background Auto-Save] ✓ Saved to temp_humid:", result.data);
-            } else {
-              console.error("[Background Auto-Save] ✗ DB Error:", result.message);
+              console.log("[Background Auto-Save Hourly] ✓ Saved to temp_humid:", result.data);
+            } else if (result.status === 'skipped') {
+              console.log("[Background Auto-Save Hourly] - Throttled:", result.message);
             }
           })
           .catch(function(err) {
