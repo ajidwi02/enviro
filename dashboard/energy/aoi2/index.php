@@ -111,8 +111,46 @@ $saving = $rts_yesterday/($consumpt_yesterday+$rts_yesterday);
 	gauge_power = [];
 	</script>
 	
+	<style>
+	/* Sidebar & Toggle Button Styles */
+	.toggle-btn {
+		position: fixed;
+		left: 260px;
+		top: 15px;
+		background: #1f2a40;
+		color: #fff;
+		padding: 6px 12px;
+		cursor: pointer;
+		border-radius: 4px;
+		z-index: 1050;
+		transition: all 0.3s ease;
+		font-size: 18px;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+		user-select: none;
+	}
+	.toggle-btn.closed {
+		left: 15px;
+	}
+	.toggle-btn:hover {
+		background: #00acc1;
+		color: #fff;
+	}
+	.main-content {
+		transition: margin-left 0.3s ease;
+	}
+	body.sidebar-open .main-content {
+		margin-left: 250px;
+	}
+	@media (max-width: 768px) {
+		body.sidebar-open .main-content {
+			margin-left: 0 !important;
+		}
+	}
+	</style>
   </head>
   <body onload="return MQTTconnect();" class="horizontal light">
+    <?php include 'sidebar.php'; ?>
+    <div id="toggleSidebar" class="toggle-btn" title="Toggle Sidebar">☰</div>
     <div class="wrapper">
       <main role="main" class="main-content">
 		<table style="width:100%">
@@ -789,6 +827,52 @@ $saving = $rts_yesterday/($consumpt_yesterday+$rts_yesterday);
 		console.log("Subscribing to topic = "+stopic);
 		mqtt.subscribe(stopic);
 		return false;
+	}
+	</script>
+
+	<!-- Sidebar Control Script -->
+	<script>
+	const sidebar = document.getElementById("sidebar");
+	const toggleBtn = document.getElementById("toggleSidebar");
+	const closeSidebarBtn = document.getElementById("closeSidebar");
+
+	function updateSidebar(status) {
+		if (status === "closed") {
+			sidebar.classList.add("hidden");
+			document.body.classList.remove("sidebar-open");
+			toggleBtn.classList.add("closed");
+			toggleBtn.textContent = "☰";
+		} else {
+			sidebar.classList.remove("hidden");
+			document.body.classList.add("sidebar-open");
+			toggleBtn.classList.remove("closed");
+			toggleBtn.textContent = "✖";
+		}
+		// Reflow Highcharts charts to smoothly adapt to layout changes
+		setTimeout(function() {
+			if (typeof Highcharts !== 'undefined' && Highcharts.charts) {
+				Highcharts.charts.forEach(function(chart) {
+					if (chart) chart.reflow();
+				});
+			}
+		}, 350);
+	}
+
+	let sidebarStatus = localStorage.getItem("sidebarStatus_aoi2") || "closed";
+	updateSidebar(sidebarStatus);
+
+	toggleBtn.addEventListener("click", function() {
+		sidebarStatus = sidebar.classList.contains("hidden") ? "open" : "closed";
+		localStorage.setItem("sidebarStatus_aoi2", sidebarStatus);
+		updateSidebar(sidebarStatus);
+	});
+
+	if (closeSidebarBtn) {
+		closeSidebarBtn.addEventListener("click", function() {
+			sidebarStatus = "closed";
+			localStorage.setItem("sidebarStatus_aoi2", sidebarStatus);
+			updateSidebar(sidebarStatus);
+		});
 	}
 	</script>
   </body>

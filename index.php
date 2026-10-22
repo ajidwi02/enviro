@@ -110,7 +110,7 @@
                   <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/dashboard/temperature/aoi2/" target="_blank">
                      <span class="ml-1 item-text">Dashboard</a></li>
                   <!-- <li class="nav-item"><a class="nav-link" href="#">Dashboard</a></li>-->
-                   <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/report/temperature/aoi2/" target="_blank">
+                  <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/report/temperature/aoi2/" target="_blank">
                      <span class="ml-1 item-text">Report</a></li>
               </ul>
             </li>
@@ -123,6 +123,8 @@
                     <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/dashboard/energy/aoi2/" target="_blank">
                        <span class="ml-1 item-text">Dashboard</a></li>
                     <!--<li class="nav-item"><a class="nav-link" href="#">Report</a></li>-->
+                    <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/report/energy/aoi2/index.php" target="_blank">
+                     <span class="ml-1 item-text">Report</a></li>
                   </ul>
                 </li>
 				<!-- End Sub Menu -->
