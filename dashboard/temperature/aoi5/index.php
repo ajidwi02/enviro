@@ -199,7 +199,7 @@ foreach ($sensor_configs as $cfg) {
         <table style="width:100%" class="mb-3">
             <tr>
                 <td style="width: 10%;text-align: center;vertical-align: middle;">
-                    <img src="../../../logo_aoi.png" width="110" alt="Logo AOI">
+                    <img src="../../../logo_aoi.png" width="80" alt="Logo AOI">
                 </td>
                 <td style="width: 80%;vertical-align: middle;">
                     <div class="w-75 mx-auto text-center">
@@ -218,7 +218,7 @@ foreach ($sensor_configs as $cfg) {
                     </div>
                 </td>
                 <td style="width: 10%;text-align:center;vertical-align: middle;">
-                    <img src="../../../logo_bbi.png" width="130" alt="Logo BBI">
+                    <img src="../../../nagaileben.png" width="180" alt="Logo BBI">
                 </td>
             </tr>
         </table>
