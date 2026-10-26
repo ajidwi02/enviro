@@ -13,15 +13,36 @@ include '../config_temp_humid.php';
 
 date_default_timezone_set("Asia/Jakarta");
 
+function log_webhook($status, $details, $raw_input = '') {
+    $log_file = __DIR__ . '/webhook_debug.log';
+    if (file_exists($log_file) && filesize($log_file) > 1000000) {
+        @unlink($log_file);
+    }
+    $time = date('Y-m-d H:i:s');
+    $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'CLI/UNKNOWN';
+    $raw_snippet = substr(str_replace(["\r", "\n", "\t"], ' ', (string)$raw_input), 0, 200);
+    $entry = "[$time] [IP: $ip] [$status] $details | RAW: $raw_snippet\n";
+    @file_put_contents($log_file, $entry, FILE_APPEND);
+}
+
 // 1. Tangkap Payload (JSON, EMQX Webhook Data Bridge, Form POST, atau GET)
 $raw_input = file_get_contents('php://input');
 $data = json_decode($raw_input, true);
+
+// Dukungan jika raw_input berupa string JSON yang di-encode base64 secara utuh
+if (!$data && is_string($raw_input) && strlen(trim($raw_input)) > 0) {
+    $b64_raw = base64_decode(trim($raw_input), true);
+    if ($b64_raw !== false) {
+        $data = json_decode($b64_raw, true);
+    }
+}
 
 if (!$data) {
     $data = !empty($_POST) ? $_POST : $_GET;
 }
 
 if (empty($data)) {
+    log_webhook('EMPTY', 'No data payload received', $raw_input);
     echo json_encode([
         'status' => 'error',
         'message' => 'No data payload received'
@@ -30,10 +51,17 @@ if (empty($data)) {
 }
 
 // 1.1 Unwrapping jika payload dibungkus oleh EMQX Data Bridge / Rule Engine
-// Format EMQX seringkali: {"payload": {...}, "topic": "..."} atau {"payload": "{...}"}
+// Format EMQX seringkali: {"payload": {...}, "topic": "..."} atau {"payload": "{...}"} atau {"payload": "Base64..."}
 if (isset($data['payload'])) {
     if (is_string($data['payload'])) {
         $unwrapped = json_decode($data['payload'], true);
+        if (!is_array($unwrapped)) {
+            // Cek apakah payload merupakan string Base64 dari EMQX v5
+            $b64 = base64_decode($data['payload'], true);
+            if ($b64 !== false) {
+                $unwrapped = json_decode($b64, true);
+            }
+        }
         if (is_array($unwrapped)) {
             $data = array_merge($data, $unwrapped);
         }
@@ -66,6 +94,7 @@ if (strpos($loc_lower, '502') !== false || strpos($loc_lower, 'area_2') !== fals
     $id_location = '501';
 } else {
     // Tolak jika bukan sensor milik AOI 5
+    log_webhook('IGNORED', "Location '$raw_location' not recognized for AOI 5", $raw_input);
     echo json_encode([
         'status' => 'ignored',
         'message' => 'Sensor location not recognized for AOI 5 (expected 501/Area_1 or 502/Area_2)',
@@ -100,6 +129,7 @@ if (isset($data['humidi']) && is_numeric($data['humidi'])) {
 
 // Jika keduanya null, berikan respon error
 if ($temp === null && $humidity === null) {
+    log_webhook('INVALID_METRIC', "No valid temperature or humidity found in payload", $raw_input);
     echo json_encode([
         'status' => 'error',
         'message' => 'No valid temperature or humidity values found in payload',
@@ -132,6 +162,7 @@ $id_transaction = isset($data['id_transaction']) && !empty($data['id_transaction
 
 // 3. Validasi Koneksi Database
 if (!$conn) {
+    log_webhook('DB_ERROR', 'Database connection failed: ' . mysqli_connect_error(), $raw_input);
     echo json_encode([
         'status' => 'error',
         'message' => 'Database connection failed: ' . mysqli_connect_error()
@@ -159,6 +190,7 @@ if (!$is_forced) {
 
         // Abaikan jika timestamp payload lebih lampau atau sama dengan data terakhir di database
         if ($curr_timestamp <= $last_timestamp) {
+            log_webhook('SKIPPED_STALE', "Stale data for Loc $safe_id_loc (current: $safe_record_time <= last: " . $last_row['record_time'] . ")", $raw_input);
             echo json_encode([
                 'status' => 'skipped',
                 'message' => 'Stale data: Payload timestamp is older than or equal to last record in database',
@@ -175,6 +207,7 @@ if (!$is_forced) {
 
         // Jika kurang dari 1 jam (3600 detik), skip penyimpanan
         if ($diff_seconds < 3600) {
+            log_webhook('SKIPPED_THROTTLE', "Hourly throttle for Loc $safe_id_loc (" . round($diff_seconds / 60) . "m ago < 60m)", $raw_input);
             echo json_encode([
                 'status' => 'skipped',
                 'message' => 'Hourly throttle: Data already saved within the last 1 hour (' . round($diff_seconds / 60) . ' mins ago). Next save in ' . round((3600 - $diff_seconds) / 60) . ' mins.',
@@ -200,6 +233,7 @@ $query = "INSERT INTO temp_humid (id_transaction, id_location, temp, humidity, r
 $result = mysqli_query($conn, $query);
 
 if ($result) {
+    log_webhook('SUCCESS', "Saved Loc $safe_id_loc | Temp: $temp_val | Hum: $humidity_val | Time: $safe_record_time", $raw_input);
     echo json_encode([
         'status' => 'success',
         'source' => isset($data['topic']) ? 'emqx_data_bridge' : 'client_api',
@@ -213,6 +247,7 @@ if ($result) {
         ]
     ]);
 } else {
+    log_webhook('INSERT_ERROR', "MySQL Error: " . mysqli_error($conn) . " | SQL: $query", $raw_input);
     echo json_encode([
         'status' => 'error',
         'message' => 'Database insert error: ' . mysqli_error($conn),

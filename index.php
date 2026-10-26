@@ -39,118 +39,142 @@
 		</a>
 		<nav class="vertnav navbar navbar-light">
 		  <!-- Start Logo -->
-		  <div class="w-100 mb-4 d-flex">
-			<img src="logo_aoi.png" width="160" alt="Logo AOI">
+		  <div class="w-100 mb-3 text-center d-flex flex-column align-items-center justify-content-center pt-2 pb-2">
+			<a href="index.php" class="d-inline-flex flex-column align-items-center text-decoration-none">
+			  <img src="logo_aoi.png?v=<?= filemtime(__DIR__ . '/logo_aoi.png') ?>" alt="Logo AOI" class="img-fluid" style="max-height: 95px; width: auto; object-fit: contain;">
+			</a>
 		  </div>
 		  <!-- End Logo -->
 
 		  <!-- Start Menu Bar -->
-		  <p class="text-muted nav-heading mt-4 mb-1">
+		  <p class="text-muted nav-heading mt-3 mb-1">
 			<span>Menu</span>
 		  </p>
 
-			<!-- Start Menu -->
-
-      <!-- Menu Utama: AOI 1 (Dashboard) -->
-
-			<ul class="navbar-nav flex-fill w-100 mb-2">
-			<a class="nav-link pl-3" href="#"><span class="ml-1 item-text">Menu Utama</span></a>
+		  <!-- Start Menu -->
+		  <ul class="navbar-nav flex-fill w-100 mb-2">
+			<li class="nav-item active">
+			  <a class="nav-link pl-3" href="index.php">
+				<i class="fe fe-home fe-16"></i>
+				<span class="ml-3 item-text font-weight-bold">Menu Utama</span>
+			  </a>
+			</li>
 			<li class="nav-item dropdown">
-
 			  <a href="#dashboard" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle nav-link">
-				<i class="fe fe-edit fe-16"></i>
+				<i class="fe fe-layers fe-16"></i>
 				<span class="ml-3 item-text">AOI 1</span>
 			  </a>
 			  <ul class="collapse list-unstyled pl-4 w-100" id="dashboard">
-
-         <!-- Start Sub Menu-->
-         <li class="nav-item">
-               <a class="nav-link pl-3" href="#tempSubmenuaoi1" data-toggle="collapse" aria-expanded="false">
-                 <span class="ml-1 item-text">Temp Humid</span>
-               </a>
-               <!-- Sub-submenu untuk Temp Humid -->
-               <ul class="collapse list-unstyled pl-4" id="tempSubmenuaoi1">
-                 <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/dashboard/temperature/aoi1/" target="_blank">
-                    <span class="ml-1 item-text">Dashboard</a></li>
-                 <!-- <li class="nav-item"><a class="nav-link" href="#">Dashboard</a></li>-->
-                  <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/report/temperature/aoi1/" target="_blank">
-                    <span class="ml-1 item-text">Report</a></li>
-                 <!-- <li class="nav-item"><a class="nav-link" href="#">Report</a></li> -->
-               </ul>
-             </li>
-             <li class="nav-item">
-                   <a class="nav-link pl-3" href="#energySubmenuaoi1" data-toggle="collapse" aria-expanded="false">
-                     <span class="ml-1 item-text">Energy</span>
-                   </a>
-                   <!-- Sub-submenu untuk Temp Humid -->
-                   <ul class="collapse list-unstyled pl-4" id="energySubmenuaoi1">
-                     <li class="nav-item"><a class="nav-link" href="#">Dashboard</a></li>
-                     <!-- <li class="nav-item"><a class="nav-link" href="#">Report</a></li>-->
-                   </ul>
-                 </li>
-
-
-
-      	<!-- End Sub Menu -->
+				<!-- Start Sub Menu-->
+				<li class="nav-item">
+				  <a class="nav-link pl-3" href="#tempSubmenuaoi1" data-toggle="collapse" aria-expanded="false">
+					<span class="ml-1 item-text">Temp Humid</span>
+				  </a>
+				  <!-- Sub-submenu untuk Temp Humid -->
+				  <ul class="collapse list-unstyled pl-3" id="tempSubmenuaoi1">
+					<li class="nav-item">
+					  <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/dashboard/temperature/aoi1/" target="_blank">
+						<span class="ml-1 item-text">Dashboard</span>
+					  </a>
+					</li>
+					<li class="nav-item">
+					  <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/report/temperature/aoi1/" target="_blank">
+						<span class="ml-1 item-text">Report</span>
+					  </a>
+					</li>
+				  </ul>
+				</li>
+				<li class="nav-item">
+				  <a class="nav-link pl-3" href="#energySubmenuaoi1" data-toggle="collapse" aria-expanded="false">
+					<span class="ml-1 item-text">Energy</span>
+				  </a>
+				  <!-- Sub-submenu untuk Energy -->
+				  <ul class="collapse list-unstyled pl-3" id="energySubmenuaoi1">
+					<li class="nav-item">
+					  <a class="nav-link pl-3" href="#">
+						<span class="ml-1 item-text">Dashboard</span>
+					  </a>
+					</li>
+				  </ul>
+				</li>
+				<!-- End Sub Menu -->
 			  </ul>
 			</li>
 			<li class="nav-item dropdown">
 			  <a href="#report" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle nav-link">
-				<i class="fe fe-edit fe-16"></i>
+				<i class="fe fe-layers fe-16"></i>
 				<span class="ml-3 item-text">AOI 2</span>
 			  </a>
 			  <ul class="collapse list-unstyled pl-4 w-100" id="report">
 				<!-- Start Sub Menu -->
-        <li class="nav-item">
-              <a class="nav-link pl-3" href="#tempSubmenuaoi2" data-toggle="collapse" aria-expanded="false">
-                <span class="ml-1 item-text">Temp Humid</span>
-              </a>
-              <!-- Sub-submenu untuk Temp Humid -->
-              <ul class="collapse list-unstyled pl-4" id="tempSubmenuaoi2">
-                  <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/dashboard/temperature/aoi2/" target="_blank">
-                     <span class="ml-1 item-text">Dashboard</a></li>
-                  <!-- <li class="nav-item"><a class="nav-link" href="#">Dashboard</a></li>-->
-                   <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/report/temperature/aoi2/" target="_blank">
-                     <span class="ml-1 item-text">Report</a></li>
-              </ul>
-            </li>
-            <li class="nav-item">
-                  <a class="nav-link pl-3" href="#energySubmenuaoi2" data-toggle="collapse" aria-expanded="false">
-                    <span class="ml-1 item-text">Energy</span>
-                  </a>
-                  <!-- Sub-submenu untuk Temp Humid -->
-                  <ul class="collapse list-unstyled pl-4" id="energySubmenuaoi2">
-                    <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/dashboard/energy/aoi2/" target="_blank">
-                       <span class="ml-1 item-text">Dashboard</a></li>
-                    <!--<li class="nav-item"><a class="nav-link" href="#">Report</a></li>-->
-                  </ul>
-                </li>
+				<li class="nav-item">
+				  <a class="nav-link pl-3" href="#tempSubmenuaoi2" data-toggle="collapse" aria-expanded="false">
+					<span class="ml-1 item-text">Temp Humid</span>
+				  </a>
+				  <!-- Sub-submenu untuk Temp Humid -->
+				  <ul class="collapse list-unstyled pl-3" id="tempSubmenuaoi2">
+					<li class="nav-item">
+					  <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/dashboard/temperature/aoi2/" target="_blank">
+						<span class="ml-1 item-text">Dashboard</span>
+					  </a>
+					</li>
+					<li class="nav-item">
+					  <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/report/temperature/aoi2/" target="_blank">
+						<span class="ml-1 item-text">Report</span>
+					  </a>
+					</li>
+				  </ul>
+				</li>
+				<li class="nav-item">
+				  <a class="nav-link pl-3" href="#energySubmenuaoi2" data-toggle="collapse" aria-expanded="false">
+					<span class="ml-1 item-text">Energy</span>
+				  </a>
+				  <!-- Sub-submenu untuk Energy -->
+				  <ul class="collapse list-unstyled pl-3" id="energySubmenuaoi2">
+					<li class="nav-item">
+					  <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/dashboard/energy/aoi2/" target="_blank">
+						<span class="ml-1 item-text">Dashboard</span>
+					  </a>
+					</li>
+					<li class="nav-item">
+					  <a class="nav-link pl-3" href="http://enviro.bbi-apparel.com/report/energy/aoi2/index.php" target="_blank">
+						<span class="ml-1 item-text">Report</span>
+					  </a>
+					</li>
+				  </ul>
+				</li>
 				<!-- End Sub Menu -->
 			  </ul>
 			</li>
 			<li class="nav-item dropdown">
 			  <a href="#menuAoi5" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle nav-link">
-				<i class="fe fe-edit fe-16"></i>
+				<i class="fe fe-layers fe-16"></i>
 				<span class="ml-3 item-text">AOI 5</span>
 			  </a>
 			  <ul class="collapse list-unstyled pl-4 w-100" id="menuAoi5">
 				<!-- Start Sub Menu -->
-        <li class="nav-item">
-              <a class="nav-link pl-3" href="#tempSubmenuaoi5" data-toggle="collapse" aria-expanded="false">
-                <span class="ml-1 item-text">Temp Humid</span>
-              </a>
-              <ul class="collapse list-unstyled pl-4" id="tempSubmenuaoi5">
-                  <a class="nav-link pl-3" href="dashboard/temperature/aoi5/" target="_blank">
-                     <span class="ml-1 item-text">Dashboard</a></li>
-                  <a class="nav-link pl-3" href="report/temperature/aoi5/" target="_blank">
-                     <span class="ml-1 item-text">Report</a></li>
-              </ul>
-            </li>
+				<li class="nav-item">
+				  <a class="nav-link pl-3" href="#tempSubmenuaoi5" data-toggle="collapse" aria-expanded="false">
+					<span class="ml-1 item-text">Temp Humid</span>
+				  </a>
+				  <ul class="collapse list-unstyled pl-3" id="tempSubmenuaoi5">
+					<li class="nav-item">
+					  <a class="nav-link pl-3" href="dashboard/temperature/aoi5/" target="_blank">
+						<span class="ml-1 item-text">Dashboard</span>
+					  </a>
+					</li>
+					<li class="nav-item">
+					  <a class="nav-link pl-3" href="report/temperature/aoi5/" target="_blank">
+						<span class="ml-1 item-text">Report</span>
+					  </a>
+					</li>
+				  </ul>
+				</li>
 				<!-- End Sub Menu -->
 			  </ul>
 			</li>
-			</ul>
-			<!-- End Menu -->
+		  </ul>
+		  <!-- End Menu -->
 
 
 		  <!-- End Menu Bar -->

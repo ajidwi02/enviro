@@ -100,8 +100,10 @@
 		</a>
 		<nav class="vertnav navbar navbar-light">
 		  <!-- Start Logo -->
-		  <div class="w-100 mb-4 d-flex">
-			<img src="http://smartagv.aoi.co.id/machine_control/logo.png" width="160">
+		  <div class="w-100 mb-3 text-center d-flex flex-column align-items-center justify-content-center pt-2 pb-2">
+			<a href="../../../index.php" class="d-inline-flex flex-column align-items-center text-decoration-none">
+			  <img src="../../../logo_aoi.png?v=<?= filemtime(__DIR__ . '/../../../logo_aoi.png') ?>" alt="Logo AOI" class="img-fluid" style="max-height: 95px; width: auto; object-fit: contain;">
+			</a>
 		  </div>
 		  <!-- End Logo -->
 
