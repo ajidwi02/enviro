@@ -47,18 +47,18 @@ graph TD
         OM[Open-Meteo Weather API: -6.9692, 110.3301]
     end
 
-    subgraph 2. Backend Service: api/get_weather.php
-        DB[(Tabel MySQL: weather_aoi5)]
-        Check{Record Terakhir di DB < 1 Jam?}
-        Check -->|Ya & Tidak Force Refresh| DB
-        Check -->|Tidak / Belum Ada / Force| OM
-        OM --> Logic[Algoritma Klasifikasi 3 Status: Cerah / Mendung / Hujan]
-        Logic -->|Simpan Snapshot Hourly| DB
+    subgraph 2. Jalur Background 24/7 Mandiri (Tanpa Browser)
+        EMQX[EMQX Webhook 24/7 Sensor PLC] --> API_TEMP[api/save_temp_humid.php]
+        API_TEMP --> W_HELPER[api/weather_helper.php: sync_weather_aoi5]
+        W_HELPER -->|Cek Record Tiap Jam| DB[(Tabel MySQL: weather_aoi5)]
+        W_HELPER -.->|Tembak Open-Meteo Saat Jam Baru| OM
     end
 
-    subgraph 3. Visual Dashboard: dashboard/temperature/aoi5/index.php
+    subgraph 3. Jalur Visual Dashboard (Saat Browser Dibuka)
+        OM -.->|Fetch Berkala / Klik Refresh| API_WTR[api/get_weather.php]
+        API_WTR --> DB
         DB -->|Query Langsung Terkini| PHPInit[Render Instan Weather Banner]
-        DB -->|Fetch Asinkron / Klik Refresh| JSUpdate[Update DOM Badge & Metrik Angka]
+        API_WTR -->|Update DOM Badge & Metrik| JSUpdate[Dashboard AOI 5]
     end
 ```
 
@@ -133,38 +133,40 @@ CREATE TABLE IF NOT EXISTS `weather_aoi5` (
 
 ## 5. Rincian File yang Dikerjakan
 
-### 1. `api/get_weather.php` (File Baru)
-- **Fungsi**: Endpoint backend utama penyedia data cuaca dan eksekusi penyimpanan ke database.
+### 1. `api/weather_helper.php` (File Baru)
+- **Fungsi**: Mesin logika inti penarikan dan klasifikasi cuaca AOI 5.
 - **Fitur Utama**:
-  - Auto-generate tabel `weather_aoi5`.
-  - Integrasi HTTP client (cURL / `file_get_contents` fallback).
-  - Klasifikasi 3 status cuaca tanpa icon.
-  - **Murni Database**: Tanpa membuat/menulis file cache JSON di server.
-  - Hourly throttle guard (3.600 detik).
-  - Respon JSON terstruktur dan ramah API client.
+  - Fungsi `sync_weather_aoi5($conn, $force)` yang dapat dipanggil oleh berbagai modul.
+  - Memeriksa apakah data jam ini sudah tersimpan di database sebelum menembak API eksternal (0.2 ms execution time jika data sudah ada).
+  - Klasifikasi 3 status cuaca standar pabrik (`Cerah`, `Mendung`, `Hujan`).
 
-### 2. `dashboard/temperature/aoi5/index.php` (Diperbarui)
+### 2. `api/save_temp_humid.php` (Diperbarui)
+- **Fungsi**: Webhook penerima data PLC EMQX 24/7 di server.
+- **Pembaruan**:
+  - Menyisipkan pemanggilan `sync_weather_aoi5($conn, false)` di setiap penerimaan payload data sensor.
+  - Menjamin data cuaca otomatis tersimpan setiap jam di latar belakang server secara nonstop 24/7 meskipun seluruh browser ditutup.
+
+### 3. `api/get_weather.php` (Diperbarui)
+- **Fungsi**: Endpoint REST API penyedia data cuaca ke antarmuka dashboard.
+- **Fitur Utama**:
+  - Memanggil helper `sync_weather_aoi5()` dan mereturn data format JSON bersih.
+  - Mendukung parameter `?force=1` untuk pengujian manual.
+
+### 4. `dashboard/temperature/aoi5/index.php` (Diperbarui)
 - **Fungsi**: Halaman antarmuka utama monitoring suhu & kelembapan AOI 5.
 - **Pembaruan**:
-  - Penambahan komponen **Weather Status Banner** tepat di atas grid sensor Folding Area dan Dry Room.
-  - Tampilan indikator badge:
-    - **`CERAH`**: Badge hijau (`badge-success`)
-    - **`MENDUNG`**: Badge kuning/amber (`badge-warning text-dark`)
-    - **`HUJAN`**: Badge biru (`badge-primary`)
-  - Penampilan 4 metrik: Suhu Luar, Kelembapan Luar, Curah Hujan, dan Kecepatan Angin.
-  - Penambahan script otomatisasi `fetchWeatherData(force)` dan event listener interval 10 menit.
-  - Proteksi query inisialisasi dengan penanganan kesalahan PHP 8.
+  - Komponen **Weather Status Banner** di atas grid sensor.
+  - Tampilan teks status cuaca (`CERAH`, `MENDUNG`, `HUJAN`).
+  - Metrik: Suhu Luar, Kelembapan Luar, Curah Hujan, Kecepatan Angin, dan tombol Refresh.
 
-### 3. `report/temperature/aoi5/index.php` (Diperbarui)
+### 5. `report/temperature/aoi5/index.php` (Diperbarui)
 - **Fungsi**: Halaman laporan historis dan filter tanggal suhu & kelembapan AOI 5.
 - **Pembaruan**:
-  - Menghubungkan tabel `temp_humid` dengan `weather_aoi5` menggunakan query `LEFT JOIN` langsung pada Primary Key `id_transaction` (bebas dari error `sql_mode=only_full_group_by` dan performa maksimal).
-  - Menambahkan kolom baru **"Weather"** pada tabel DataTables yang diselaraskan sebagai teks polos seragam dengan kolom lainnya (`Cerah`, `Mendung`, `Hujan`, atau `-`).
-  - Data cuaca otomatis ikut terunduh saat pengguna menekan tombol **Export CSV** atau **Export Excel**.
+  - Relasi `LEFT JOIN` ke Primary Key `weather_aoi5` (`id_transaction`).
+  - Penambahan kolom **"Weather"** yang selaras dengan kolom lainnya.
 
-### 4. `migration_weather_aoi5.sql` (File Migrasi SQL Terpisah)
-- **Fungsi**: Skrip DDL terpisah untuk membuat tabel `weather_aoi5` sekali saja tanpa membebani skrip PHP runtime.
-- **Tujuan**: Meniadakan beban eksekusi `CREATE TABLE IF NOT EXISTS` di setiap request web, menjaga performa server tetap ringan, cepat, dan sesuai best practice database.
+### 6. `migration_weather_aoi5.sql` (File Migrasi SQL Terpisah)
+- **Fungsi**: Skrip DDL terpisah untuk membuat tabel `weather_aoi5` sekali saja tanpa membebani runtime PHP.
 
 ---
 
@@ -185,12 +187,6 @@ CREATE TABLE IF NOT EXISTS `weather_aoi5` (
    http://localhost:8000/report/temperature/aoi5/
    ```
 
-### B. Hasil Pengujian Tampilan
-- Banner kondisi cuaca tampil rapi dan proporsional di baris atas kartu sensor.
-- Jarum gauge suhu dan kelembapan Highcharts untuk sensor Folding Area (`501`) dan Dry Room (`502`) tetap responsif seketika tanpa jeda.
-- Tombol **Refresh** merespon dengan cepat dan memperbarui timestamp data.
-- Halaman report menampilkan kolom **Cuaca Luar** lengkap dengan status cuaca.
-
 ---
 
 ## 7. Petunjuk Deployment ke Server Produksi (FileZilla)
@@ -199,7 +195,9 @@ CREATE TABLE IF NOT EXISTS `weather_aoi5` (
    - Buka **phpMyAdmin** server produksi, pilih database `enviro`, lalu import file:
      📄 **`migration_weather_aoi5.sql`**
 2. **Unggah File Aplikasi via FileZilla**:
+   - 📄 **`api/weather_helper.php`** $\rightarrow$ unggah ke `/enviro/api/`
+   - 📄 **`api/save_temp_humid.php`** $\rightarrow$ unggah ke `/enviro/api/`
    - 📄 **`api/get_weather.php`** $\rightarrow$ unggah ke `/enviro/api/`
    - 📄 **`dashboard/temperature/aoi5/index.php`** $\rightarrow$ unggah ke `/enviro/dashboard/temperature/aoi5/`
    - 📄 **`report/temperature/aoi5/index.php`** $\rightarrow$ unggah ke `/enviro/report/temperature/aoi5/`
-   - 📄 **`migration_weather_aoi5.sql`** $\rightarrow$ simpan sebagai arsip dokumentasi migrasi database.
+   - 📄 **`migration_weather_aoi5.sql`** $\rightarrow$ arsip dokumentasi migrasi database.

@@ -174,6 +174,17 @@ $safe_id_trans = mysqli_real_escape_string($conn, $id_transaction);
 $safe_id_loc = mysqli_real_escape_string($conn, $id_location);
 $safe_record_time = mysqli_real_escape_string($conn, $record_time);
 
+// 3.1 Background 24/7 Server-Side Weather Ingestion (Solusi 1)
+// Sinkronkan data cuaca luar per jam secara mandiri di server tanpa butuh browser
+if ($conn) {
+    require_once __DIR__ . '/weather_helper.php';
+    try {
+        sync_weather_aoi5($conn, false);
+    } catch (Throwable $e) {
+        // Jangan biarkan error cuaca mengganggu proses utama sensor suhu
+    }
+}
+
 // 4. Throttling Penyimpanan 1 Jam (Hourly Guard)
 // Cek data terakhir dari sensor ini. Jika selisihnya kurang dari 1 jam (3600 detik), abaikan insert baru.
 $is_forced = isset($data['force']) && ($data['force'] === true || $data['force'] === 'true' || $data['force'] === 1);
