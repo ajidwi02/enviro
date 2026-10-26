@@ -73,6 +73,33 @@ foreach ($sensor_configs as $cfg) {
         )
     );
 }
+
+// Inisialisasi status cuaca awal langsung dari tabel database weather_aoi5 (Tanpa Cache File JSON)
+$init_weather = null;
+if (isset($conn) && $conn) {
+    try {
+        $qw = @mysqli_query($conn, "SELECT * FROM weather_aoi5 ORDER BY record_time DESC LIMIT 1");
+        if ($qw && mysqli_num_rows($qw) > 0) {
+            $init_weather = mysqli_fetch_assoc($qw);
+        }
+    } catch (Throwable $e) {
+        // Abaikan jika tabel belum sempat dibuat, nanti dibuat oleh api/get_weather.php
+        $init_weather = null;
+    }
+}
+$init_status   = isset($init_weather['weather_status']) ? $init_weather['weather_status'] : 'Cerah';
+$init_temp_out = (isset($init_weather['temp_outdoor']) && $init_weather['temp_outdoor'] !== null) ? $init_weather['temp_outdoor'] : '--';
+$init_hum_out  = (isset($init_weather['humidity_outdoor']) && $init_weather['humidity_outdoor'] !== null) ? $init_weather['humidity_outdoor'] : '--';
+$init_rain     = (isset($init_weather['rainfall']) && $init_weather['rainfall'] !== null) ? $init_weather['rainfall'] : '0.0';
+$init_wind     = (isset($init_weather['wind_speed']) && $init_weather['wind_speed'] !== null) ? $init_weather['wind_speed'] : '0.0';
+$init_time     = isset($init_weather['record_time']) ? $init_weather['record_time'] : '-';
+
+$init_badge_class = 'badge-success';
+if ($init_status === 'Hujan') {
+    $init_badge_class = 'badge-primary';
+} elseif ($init_status === 'Mendung') {
+    $init_badge_class = 'badge-warning text-dark';
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -222,6 +249,61 @@ foreach ($sensor_configs as $cfg) {
                 </td>
             </tr>
         </table>
+
+        <!-- Weather Status Card (AOI 5 Standar Pabrik: 3 Status Cerah / Mendung / Hujan - Tanpa Icon) -->
+        <div class="card shadow-sm mb-3 border-0 bg-white">
+            <div class="card-body py-2 px-3">
+                <div class="row align-items-center">
+                    <div class="col-lg-3 col-md-12 mb-2 mb-lg-0 border-right">
+                        <div class="d-flex align-items-center">
+                            <div class="mr-3">
+                                <span class="small text-muted d-block font-weight-bold text-uppercase" style="font-size: 0.70rem; letter-spacing: 0.5px;">Kondisi Cuaca Luar</span>
+                                <span class="badge font-weight-bold px-3 py-1 <?php echo $init_badge_class; ?>" id="wtr_status_badge" style="font-size: 0.92rem; letter-spacing: 0.5px;">
+                                    <?php echo strtoupper($init_status); ?>
+                                </span>
+                            </div>
+                            <div class="border-left pl-3">
+                                <span class="small text-muted d-block" style="font-size: 0.70rem;">Lokasi</span>
+                                <span class="font-weight-bold text-dark" style="font-size: 0.82rem;">AOI 5 (Wijayakusuma)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 col-md-12 mb-2 mb-lg-0 border-right">
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <span class="small text-muted d-block" style="font-size: 0.70rem;">Suhu Luar</span>
+                                <span class="font-weight-bold text-dark" style="font-size: 1.02rem;"><span id="wtr_temp"><?php echo $init_temp_out; ?></span> °C</span>
+                            </div>
+                            <div class="col-3 border-left">
+                                <span class="small text-muted d-block" style="font-size: 0.70rem;">Kelembapan Luar</span>
+                                <span class="font-weight-bold text-dark" style="font-size: 1.02rem;"><span id="wtr_humidity"><?php echo $init_hum_out; ?></span> %</span>
+                            </div>
+                            <div class="col-3 border-left">
+                                <span class="small text-muted d-block" style="font-size: 0.70rem;">Curah Hujan</span>
+                                <span class="font-weight-bold text-dark" style="font-size: 1.02rem;"><span id="wtr_rain"><?php echo $init_rain; ?></span> mm</span>
+                            </div>
+                            <div class="col-3 border-left">
+                                <span class="small text-muted d-block" style="font-size: 0.70rem;">Angin</span>
+                                <span class="font-weight-bold text-dark" style="font-size: 1.02rem;"><span id="wtr_wind"><?php echo $init_wind; ?></span> km/h</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-12 text-lg-right text-left">
+                        <div class="d-inline-block text-left text-lg-right align-middle mr-2">
+                            <span class="small text-muted d-block" style="font-size: 0.70rem;">
+                                Update: <span id="wtr_last_update" class="font-weight-bold text-dark"><?php echo $init_time; ?></span>
+                            </span>
+                            <span class="small" id="wtr_db_status" style="font-size: 0.70rem;">
+                                <span class="text-muted">Auto-Save DB: 1 Jam</span>
+                            </span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="btn_refresh_weather" style="font-size: 0.72rem; vertical-align: middle;" onclick="fetchWeatherData(true)" title="Perbarui Data Cuaca Terkini">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Grid Cards Sensor -->
         <div class="row">
@@ -691,6 +773,92 @@ foreach ($sensor_configs as $cfg) {
         }
         return false;
     }
+
+    // ==========================================
+    // Weather Integration AOI 5 (Standar Pabrik)
+    // ==========================================
+    function updateWeatherUI(data) {
+        var statusElem = document.getElementById("wtr_status_badge");
+        var tempElem   = document.getElementById("wtr_temp");
+        var humElem    = document.getElementById("wtr_humidity");
+        var rainElem   = document.getElementById("wtr_rain");
+        var windElem   = document.getElementById("wtr_wind");
+        var updateElem = document.getElementById("wtr_last_update");
+        var dbElem     = document.getElementById("wtr_db_status");
+
+        if (statusElem && data.weather_status) {
+            var st = data.weather_status;
+            statusElem.innerText = st.toUpperCase();
+            statusElem.className = "badge font-weight-bold px-3 py-1";
+            if (st === 'Hujan') {
+                statusElem.classList.add('badge-primary');
+            } else if (st === 'Mendung') {
+                statusElem.classList.add('badge-warning', 'text-dark');
+            } else {
+                statusElem.classList.add('badge-success');
+            }
+        }
+
+        if (tempElem && data.temp_outdoor !== null && data.temp_outdoor !== undefined) {
+            tempElem.innerText = data.temp_outdoor;
+        }
+        if (humElem && data.humidity_outdoor !== null && data.humidity_outdoor !== undefined) {
+            humElem.innerText = data.humidity_outdoor;
+        }
+        if (rainElem && data.rainfall !== null && data.rainfall !== undefined) {
+            rainElem.innerText = data.rainfall;
+        }
+        if (windElem && data.wind_speed !== null && data.wind_speed !== undefined) {
+            windElem.innerText = data.wind_speed;
+        }
+        if (updateElem && data.record_time) {
+            updateElem.innerText = data.record_time;
+        }
+        if (dbElem && data.db_save_status) {
+            if (data.db_save_status === 'saved_success') {
+                dbElem.innerHTML = "<span class='text-success font-weight-bold'>✓ Tersimpan di DB</span>";
+            } else if (data.db_save_status === 'skipped_hourly_throttle') {
+                dbElem.innerHTML = "<span class='text-muted'>DB: Snapshot Aktif (1 Jam)</span>";
+            }
+        }
+    }
+
+    function fetchWeatherData(force) {
+        var url = '../../../api/get_weather.php' + (force ? '?force=1' : '');
+        var btnRefresh = document.getElementById("btn_refresh_weather");
+        if (btnRefresh) {
+            btnRefresh.disabled = true;
+            btnRefresh.innerText = "...";
+        }
+
+        fetch(url)
+        .then(function(res) { return res.json(); })
+        .then(function(res) {
+            if (btnRefresh) {
+                btnRefresh.disabled = false;
+                btnRefresh.innerText = "Refresh";
+            }
+            if (res.status === 'success' && res.data) {
+                updateWeatherUI(res.data);
+                console.log("[Weather AOI 5] Data cuaca diperbarui:", res.data);
+            }
+        })
+        .catch(function(err) {
+            if (btnRefresh) {
+                btnRefresh.disabled = false;
+                btnRefresh.innerText = "Refresh";
+            }
+            console.error("[Weather AOI 5] Gagal memuat cuaca:", err);
+        });
+    }
+
+    // Panggil cuaca saat halaman dibuka & refresh berkala tiap 10 menit
+    window.addEventListener('load', function() {
+        fetchWeatherData(false);
+    });
+    setInterval(function() {
+        fetchWeatherData(false);
+    }, 10 * 60 * 1000);
     </script>
   </body>
 </html>

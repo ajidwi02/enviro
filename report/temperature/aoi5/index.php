@@ -12,24 +12,32 @@
 		$safe_range1 = mysqli_real_escape_string($conn, $range1);
 		$safe_range2 = mysqli_real_escape_string($conn, $range2);
 
-		$report = "SELECT id_transaction, id_location, temp, humidity, record_time, 
-		                  DATE_FORMAT(record_time, '%W') AS day_name,
-		                  DATE(record_time) AS date_only 
-		           FROM temp_humid 
-		           WHERE (id_location IN ('501', '502', 'area501', 'area502', 'Area_1', 'Area_2', 'temp1', 'temp2')) 
-		             AND DATE(record_time) BETWEEN '$safe_range1' AND '$safe_range2' 
-		           ORDER BY record_time DESC";
+		$report = "SELECT t.id_transaction, t.id_location, t.temp, t.humidity, t.record_time, 
+		                  DATE_FORMAT(t.record_time, '%W') AS day_name,
+		                  DATE(t.record_time) AS date_only,
+		                  w.weather_status,
+		                  w.temp_outdoor
+		           FROM temp_humid t
+		           LEFT JOIN weather_aoi5 w 
+		               ON w.id_transaction = CONCAT('AOI5_WTR_', DATE_FORMAT(t.record_time, '%Y%m%d_%H'), '0000')
+		           WHERE (t.id_location IN ('501', '502', 'area501', 'area502', 'Area_1', 'Area_2', 'temp1', 'temp2')) 
+		             AND DATE(t.record_time) BETWEEN '$safe_range1' AND '$safe_range2' 
+		           ORDER BY t.record_time DESC";
 		$result_report = mysqli_query($conn, $report);
 
 	} else
 	{
-		$report = "SELECT id_transaction, id_location, temp, humidity, record_time, 
-		                  DATE_FORMAT(record_time, '%W') AS day_name,
-		                  DATE(record_time) AS date_only 
-		           FROM temp_humid 
-		           WHERE (id_location IN ('501', '502', 'area501', 'area502', 'Area_1', 'Area_2', 'temp1', 'temp2')) 
-		             AND record_time >= NOW() - INTERVAL 1 WEEK 
-		           ORDER BY record_time DESC";
+		$report = "SELECT t.id_transaction, t.id_location, t.temp, t.humidity, t.record_time, 
+		                  DATE_FORMAT(t.record_time, '%W') AS day_name,
+		                  DATE(t.record_time) AS date_only,
+		                  w.weather_status,
+		                  w.temp_outdoor
+		           FROM temp_humid t
+		           LEFT JOIN weather_aoi5 w 
+		               ON w.id_transaction = CONCAT('AOI5_WTR_', DATE_FORMAT(t.record_time, '%Y%m%d_%H'), '0000')
+		           WHERE (t.id_location IN ('501', '502', 'area501', 'area502', 'Area_1', 'Area_2', 'temp1', 'temp2')) 
+		             AND t.record_time >= NOW() - INTERVAL 1 WEEK 
+		           ORDER BY t.record_time DESC";
 		$result_report = mysqli_query($conn, $report);
 	}
 ?>
@@ -192,6 +200,7 @@
 								<th>Location</th>
 								<th>Temperature (C)</th>
 								<th>Humidity (%)</th>
+								<th>Weather</th>
 								<th>Record Time</th>
 								<th>Day Name</th>
 							  </tr>
@@ -212,7 +221,7 @@
 										$humi = $row_report['humidity'];
 										$record_time = $row_report['record_time'];
 										$dayname = $row_report['day_name'];
-
+										$weather = !empty($row_report['weather_status']) ? $row_report['weather_status'] : '-';
 										?>
 										<tr>
 											<td></td>
@@ -221,6 +230,7 @@
 											<td><?php echo $location_name;?></td>
 											<td><?php echo $Temp;?></td>
 											<td><?php echo $humi ;?></td>
+											<td><?php echo $weather ;?></td>
 											<td><?php echo $record_time ;?></td>
 											<td><?php echo $dayname ;?></td>
 										</tr>
