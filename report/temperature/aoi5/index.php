@@ -40,6 +40,22 @@
 		           ORDER BY t.record_time DESC";
 		$result_report = mysqli_query($conn, $report);
 	}
+
+	// 1. Koleksi Seluruh Record untuk Ekspor ExcelJS & Grafik
+	$report_rows = array();
+	if ($result_report && mysqli_num_rows($result_report) > 0) {
+		while ($r = mysqli_fetch_assoc($result_report)) {
+			$report_rows[] = $r;
+		}
+		mysqli_data_seek($result_report, 0); // Kembalikan pointer untuk perulangan tabel HTML di bawah
+	}
+
+	// 2. Siapkan Logo AOI Base64 untuk Disematkan ke Header Excel
+	$logo_path = __DIR__ . '/../../../logo_aoi.png';
+	$logo_base64 = '';
+	if (file_exists($logo_path)) {
+		$logo_base64 = base64_encode(file_get_contents($logo_path));
+	}
 ?>
 
 <!doctype html>
@@ -69,6 +85,34 @@
 	<style type="text/css">
             .dt-buttons{
                 width: 100%;
+                margin-bottom: 12px;
+            }
+            .btn-excel-custom {
+                background-color: #107c41 !important;
+                border-color: #107c41 !important;
+                color: #ffffff !important;
+                font-weight: 600 !important;
+                transition: all 0.2s ease-in-out;
+            }
+            .btn-excel-custom:hover {
+                background-color: #0c5c30 !important;
+                border-color: #0c5c30 !important;
+                color: #ffffff !important;
+                box-shadow: 0 2px 8px rgba(16, 124, 65, 0.4);
+            }
+            .badge-safe {
+                background-color: #d1fae5;
+                color: #065f46;
+                font-weight: 600;
+                padding: 4px 8px;
+                border-radius: 4px;
+            }
+            .badge-alert {
+                background-color: #fee2e2;
+                color: #991b1b;
+                font-weight: 700;
+                padding: 4px 8px;
+                border-radius: 4px;
             }
     </style>
 	<script src="../../../js/jquery.dataTables.min.js"></script>
@@ -77,28 +121,51 @@
 	<script src="../../../js/buttons.html5.min.js"></script>
 
 	<script>
+        var REPORT_DATA = <?php echo json_encode($report_rows); ?>;
+        var AOI_LOGO_BASE64 = "<?php echo $logo_base64; ?>";
+        var REPORT_FILTER_INFO = {
+            range_text: "<?php echo isset($_GET['range']) ? addslashes($_GET['range']) : 'Last 1 Week'; ?>",
+            from: "<?php echo isset($from) ? addslashes($from) : date('d M Y', strtotime('-1 week')); ?>",
+            to: "<?php echo isset($to) ? addslashes($to) : date('d M Y'); ?>"
+        };
+
         $(document).ready(function(){
             var empDataTable = $('#dataTable-2').DataTable({
                 dom: 'Blfrtip',
 				lengthMenu: [100, 500, 1000],
                 buttons: [
                     {
-                        extend: 'csv'
+                        extend: 'csv',
+                        text: '<i class="fe fe-file-text mr-1"></i> CSV'
                     },
                     {
-                        extend: 'excel'
+                        text: '<i class="fe fe-download mr-1"></i> Excel (+ 4 Grafik Dinamis)',
+                        className: 'btn-excel-custom',
+                        attr: {
+                            id: 'btnExportExcelChart',
+                            title: 'Ekspor Excel Multi-Sheet Lengkap dengan 4 Grafik Native Dinamis & Batas Acuan (30°C / 60%)'
+                        },
+                        action: function (e, dt, node, config) {
+                            var rangeVal = $('#reportrange').val() || "<?php echo isset($_GET['range']) ? addslashes($_GET['range']) : ''; ?>";
+                            var exportUrl = 'export_excel_native.php' + (rangeVal ? '?range=' + encodeURIComponent(rangeVal) : '');
+                            var $btn = $(node);
+                            var oldHtml = $btn.html();
+                            $btn.prop('disabled', true).html('<i class="fe fe-loader fe-spin mr-1"></i> Menyiapkan Excel Dinamis...');
+                            window.location.href = exportUrl;
+                            setTimeout(function() {
+                                $btn.prop('disabled', false).html(oldHtml);
+                            }, 3000);
+                        }
                     }
                 ] 
-
-
             });
-			empDataTable.on('order.dt search.dt', function () {
-			let i = 1;
 
-			empDataTable.cells(null, 0, { search: 'applied', order: 'applied' }).every(function (cell) {
-				this.data(i++);
-			});
-		}).draw();
+			empDataTable.on('order.dt search.dt', function () {
+				let i = 1;
+				empDataTable.cells(null, 0, { search: 'applied', order: 'applied' }).every(function (cell) {
+					this.data(i++);
+				});
+			}).draw();
 
         });
     </script>
@@ -190,6 +257,19 @@
 							</form>
 						</div>
 
+						<!-- Banner Informasi Standar Acuan Aman -->
+						<div class="alert alert-info py-2 px-3 d-flex align-items-center justify-content-between mb-3 shadow-sm" style="font-size: 0.9rem; border-left: 4px solid #107c41;">
+							<div>
+								<i class="fe fe-shield text-success mr-2 fe-16"></i>
+								<strong>Batas Acuan Aman Standar Pabrik:</strong> 
+								Suhu Maksimum <span class="badge badge-light text-danger font-weight-bold ml-1">30.0 °C</span> &bull; 
+								Kelembapan Maksimum <span class="badge badge-light text-danger font-weight-bold ml-1">60.0 %</span>
+							</div>
+							<div class="small text-muted d-none d-md-block">
+								<i class="fe fe-check-circle text-success mr-1"></i>Ekspor Excel otomatis menyusun <strong>4 Grafik Visual Multi-Granularitas</strong> (Per Jam, Hari, Minggu, Bulan).
+							</div>
+						</div>
+
 						<!-- Start Table -->
 						<table class="table datatables" id="dataTable-2">
 							<thead>
@@ -222,14 +302,17 @@
 										$record_time = $row_report['record_time'];
 										$dayname = $row_report['day_name'];
 										$weather = !empty($row_report['weather_status']) ? $row_report['weather_status'] : '-';
+
+										$temp_num = is_numeric($Temp) ? floatval($Temp) : 0.0;
+										$humi_num = is_numeric($humi) ? floatval($humi) : 0.0;
 										?>
 										<tr>
 											<td></td>
 											<td><?php echo $factory;?></td>
 											<td><?php echo $id_location;?></td>
 											<td><?php echo $location_name;?></td>
-											<td><?php echo $Temp;?></td>
-											<td><?php echo $humi ;?></td>
+											<td class="<?php echo ($temp_num > 30.0) ? 'text-danger font-weight-bold' : ''; ?>"><?php echo $Temp;?></td>
+											<td class="<?php echo ($humi_num > 60.0) ? 'text-danger font-weight-bold' : ''; ?>"><?php echo $humi ;?></td>
 											<td><?php echo $weather ;?></td>
 											<td><?php echo $record_time ;?></td>
 											<td><?php echo $dayname ;?></td>
@@ -260,8 +343,8 @@
 	<script src='../../../js/daterangepicker.js'></script>
 
 	<script>
-      var start = moment();
-      var end = moment();
+      var start = <?php echo isset($range1) ? "moment('" . addslashes($range1) . "')" : "moment().subtract(6, 'days')"; ?>;
+      var end = <?php echo isset($range2) ? "moment('" . addslashes($range2) . "')" : "moment()"; ?>;
 
       $('#reportrange').daterangepicker(
       {
