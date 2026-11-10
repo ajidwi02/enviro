@@ -1,6 +1,6 @@
 <?php
 include 'db.php';
-require 'vendor/autoload.php'; // composer require phpoffice/phpspreadsheet
+require_once __DIR__ . '/../../../vendor/autoload.php'; // composer require phpoffice/phpspreadsheet
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
