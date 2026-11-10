@@ -1,247 +1,225 @@
-# Rencana Implementasi: Fitur Ekspor Excel dengan Grafik Visual Multi-Granularitas (Temperature & Humidity AOI 5)
+# Rencana Implementasi: Ekspor Excel Format Matriks Horisontal Pabrik dengan Grafik Native Dinamis (Temperature & Humidity AOI 5)
 
 **Project:** Enviro Monitoring System  
 **Unit Pabrik:** PT Apparel One Indonesia (AOI 5 - Semarang)  
 **Modul:** Report Temperature & Humidity  
-**Dokumen:** Rencana Implementasi Teknis (*Technical Implementation Plan - Final Approved*)  
-**Tanggal Pembaruan:** 10 November 2026  
-**Status:** **Selesai Diimplementasikan (Native Dynamic Charts via PhpSpreadsheet)**  
+**Dokumen:** Rencana Implementasi Teknis (*Technical Implementation Plan - Revised Matrix Format*)  
+**Tanggal:** 10 November 2026  
+**Status:** **Selesai Diimplementasikan & Terverifikasi (Full Factory Matrix & Dynamic Charts)**  
 
 ---
 
-## 1. Ringkasan Keputusan Desain (*User Decisions*)
+## 1. Ringkasan Keputusan & Arahan Pengguna (*User Confirmed Requirements*)
 
-Berdasarkan masukan dan arahan spesifik dari pengguna (*user requirements*), implementasi ekspor Excel mengadopsi 4 pilar utama:
+Berdasarkan contoh file template Excel (`SUHU_AREA_OCTOBER_2026.xlsx`) dan masukan tertulis dari pengguna, implementasi ekspor Excel diperbarui total dengan spesifikasi sebagai berikut:
 
-1. **Struktur Lembar Kerja (Pilihan: Opsi B - Multi-Sheet)**:
-   * **Sheet 1 (`Dashboard & Grafik`)**: Lembar kerja eksekutif yang memuat Header resmi perusahaan, Kartu KPI Statistik Ringkas (termasuk kepatuhan batas aman), **4 Native Dynamic Line Charts (Per Jam, Hari, Minggu, Bulan)**, serta Tabel Agregasi Harian.
-   * **Sheet 2 (`Data Detail Historis`)**: Lembar kerja data mentah (*raw data*) dengan 9 kolom standar (kolom Status Acuan dihilangkan sesuai permintaan pengguna) dengan pemformatan angka desimal dan penandaan sel merah bagi nilai yang melampaui batas aman.
-   * **Sheet 3 (`Chart Data Source`)**: Lembar rujukan formula dinamis yang terhubung ke objek grafik native Microsoft Excel.
-2. **Penempatan Tombol & Mesin Ekspor (Native Dynamic Excel)**:
-   * Tombol bawaan Excel DataTables yang lama **digantikan secara langsung** oleh tombol ekspor baru berikon Excel: `[ Excel (+ 4 Grafik Dinamis) ]`.
-   * Skrip memanggil backend PHP [`report/temperature/aoi5/export_excel_native.php`](file:///e:/Apparel/Enviro/enviro/report/temperature/aoi5/export_excel_native.php) berbasis **`PhpSpreadsheet`** untuk merakit file `.xlsx` dengan grafik native Excel dinamis (bukan gambar statis).
-3. **Grafik Native Dinamis (Bukan Gambar)**:
-   * Grafik adalah **objek chart asli Microsoft Excel** yang terhubung (*linked by formula*) ke sel data. Jika data sel diedit di Excel, garis grafik otomatis bergerak seketika.
-     1. **Tren Per Jam (*Hourly*)**: Detail fluktuasi suhu dan kelembapan jam-demi-jam.
-     2. **Tren Per Hari (*Daily*)**: Rata-rata (*Average*), Titik Tertinggi (*Max*), dan Titik Terendah (*Min*) harian.
-     3. **Tren Per Minggu (*Weekly*)**: Rata-rata mingguan untuk evaluasi pola kerja dan shift operasional pabrik.
-     4. **Tren Per Bulan (*Monthly*)**: Analisis makro iklim mikro pabrik per bulan.
-4. **Batas Acuan / Ambang Batas Aman Standar Pabrik (Threshold Limits)**:
-   * **Batas Maksimal Suhu (*Max Temperature Threshold*)**: **`30.0 °C`**  
-     * Kondisi $\le 30.0^\circ\text{C}$ = **AMAN (NORMAL)**  
-     * Kondisi $> 30.0^\circ\text{C}$ = **BAHAYA / MELEBIHI BATAS (*OVERHEAT ALERT*)**
-   * **Batas Maksimal Kelembapan (*Max Humidity Threshold*)**: **`60.0 %`**  
-     * Kondisi $\le 60.0\%$ = **AMAN (NORMAL)**  
-     * Kondisi $> 60.0\%$ = **BAHAYA / MELEBIHI BATAS (*HIGH HUMIDITY ALERT*)**
-   * Kedua batas aman ini disematkan sebagai **Garis Referensi Horizontal Merah (*Red Reference Threshold Line*)** di setiap grafik, dicantumkan pada kartu KPI Kepatuhan, dan diberi sorotan (*conditional formatting/highlight*) pada baris data tabel.
+| Parameter | Keputusan Pengguna | Penjelasan Teknis & Implementasi |
+| :--- | :--- | :--- |
+| **1. Jam Sampling Matriks** | **07:00 s/d 16:00 (10 Slot Jam)** | Ditarik 10 slot jam operasional: `07:00`, `08:00`, `09:00`, `10:00`, `11:00`, `12:00`, `13:00`, `14:00`, `15:00`, `16:00`. |
+| **2. Logika Penarikan Jam** | **Data Paling Dekat (*Nearest Match*)** | Jika pada jam tepat `HH:00:00` tidak ada snapshot persis, sistem mencari rekaman sensor pada tanggal tersebut yang selisih menitnya paling dekat dengan jam target. |
+| **3. Rentang Tanggal** | **Mengikuti Filter Web Dinamis** | Kolom matriks tanggal (`D, E, F, ...`) otomatis digenerate sesuai filter *DateRangePicker* yang dipilih pengguna di web (misal filter 7 hari $\rightarrow$ 7 kolom tanggal; filter 1 bulan $\rightarrow$ 30/31 kolom tanggal). |
+| **4. Penempatan Grafik** | **Opsi A (Di Bawah Tabel Matriks)** | Grafik ditempatkan di lembar kerja yang sama (**Sheet 1**), tepat di bawah tabel matriks Dry Room dan Folding Area. |
+| **5. Format Kelembapan** | **Persentase (`%`)** | Nilai disimpan sebagai angka desimal murni (contoh: `0.58`) dan diformat di sel Excel dengan style `0%` (tampil `58%`), sehingga formula kalkulasi matematis dan grafik tetap akurat. |
+| **6. Jenis Grafik** | **Native Dynamic Excel Chart** | Bukan gambar statis PNG, melainkan objek grafik OpenXML bawaan Microsoft Excel (`PhpOffice\PhpSpreadsheet\Chart\Chart`). Garis grafik terhubung langsung ke formula baris matriks dan otomatis bergerak jika angka diubah. |
+| **7. Batas Acuan Aman** | **Suhu $\le 30.0^\circ\text{C}$ & Kelembapan $\le 60.0\%$** | Disematkan sebagai garis referensi horizontal pada grafik serta penandaan sel berwarna merah muda pada tabel matriks jika nilai melebihi batas aman. |
+| **8. Formula Dinamis Excel** | **Fungsi Asli `=AVERAGE(...)`** | Kolom `AVG` dan baris `AVERAGE TEMP` / `AERAGE HUMIDITY` diisi formula Excel asli, bukan angka mati/statis. |
 
 ---
 
-## 2. Arsitektur & Alur Kerja Ekspor (*End-to-End Workflow*)
+## 2. Struktur Tata Letak Workbook Excel (*Workbook Layout*)
 
-Sistem menggunakan **Client-Side Engine (ExcelJS + HTML5 Canvas Chart)** untuk memastikan **100% bebas dependensi server (FileZilla-ready)** dan kompatibel dengan seluruh aplikasi spreadsheet:
+Workbook akan terdiri dari **2 Lembar Kerja Utama** (dan lembar data rujukan tersembunyi/pendukung untuk grafik multi-granularitas):
 
 ```mermaid
 flowchart TD
-    subgraph 1. Interaksi Pengguna
-        USER["Pengguna Klik Tombol 'Excel' di DataTables"]
-        FILTER["Rentang Tanggal Terpilih (DateRangePicker)"]
+    subgraph Workbook: Laporan_Temp_Humid_AOI5.xlsx
+        S1["Sheet 1: 'SUHU AREA' (Executive Matrix + Native Charts)<br/>- Judul Bulan / Periode Laporan<br/>- Blok Tabel Matriks 1: SUHU AREA DRYROOM (502)<br/>- Blok Tabel Matriks 2: SUHU AREA FOLDING (501)<br/>- 4 Panel Grafik Native Dinamis (Opsi A: Di Bawah Tabel)"]
+        S2["Sheet 2: 'Data Detail Historis'<br/>- 9 Kolom Standar Raw Data Database (Tanpa Status Acuan)<br/>- Pengurutan kronologis Waktu Rekam (ASC)<br/>- Conditional Highlight Merah jika Suhu > 30°C atau Hum > 60%"]
+        S3["Sheet 3: 'Chart Data Source' (Pendukung Formula)<br/>- Agregasi data per jam, harian, mingguan, bulanan<br/>- Sumber data rujukan formula untuk grafik multi-granularitas"]
     end
-
-    subgraph 2. Agregasi Data & Evaluasi Batas Aman
-        EXTRACT["Ekstraksi Data dari Tabel Report"]
-        EVAL["Cek Kepatuhan Ambang Batas:<br/>Suhu <= 30°C | Humidity <= 60%"]
-        AGGR_H["1. Agregasi Per Jam (Hourly Series)"]
-        AGGR_D["2. Agregasi Per Hari (Daily Avg, Min, Max)"]
-        AGGR_W["3. Agregasi Per Minggu (Weekly Avg)"]
-        AGGR_M["4. Agregasi Per Bulan (Monthly Avg)"]
-    end
-
-    subgraph 3. Rendering Grafik Visual dengan Garis Batas Aman
-        RENDER_H["Render Canvas Grafik 1: Per Jam + Garis 30°C & 60%"]
-        RENDER_D["Render Canvas Grafik 2: Per Hari + Garis 30°C & 60%"]
-        RENDER_W["Render Canvas Grafik 3: Per Minggu + Garis 30°C & 60%"]
-        RENDER_M["Render Canvas Grafik 4: Per Bulan + Garis 30°C & 60%"]
-        CONVERT["Konversi Canvas ke High-Res Base64 PNG (2x Retina)"]
-    end
-
-    subgraph 4. Komposisi Workbook ExcelJS (Multi-Sheet)
-        WB["Buat Workbook Excel (.xlsx)"]
-        S1["Sheet 1: 'Dashboard & Grafik'<br/>- Logo & Header Resmi<br/>- KPI Cards (Avg, Min, Max, % Kepatuhan)<br/>- 4 Gambar Grafik Beresolusi Tinggi<br/>- Tabel Agregasi Ringkas"]
-        S2["Sheet 2: 'Data Detail Historis'<br/>- Tabel Lengkap Data Jam-demi-Jam<br/>- Highlight Merah jika Suhu > 30°C atau Hum > 60%<br/>- Kolom Cuaca Luar & Day Name"]
-    end
-
-    subgraph 5. Output
-        DOWNLOAD["Download Otomatis:<br/>Laporan_Temp_Humid_AOI5_YYYYMMDD.xlsx"]
-    end
-
-    USER --> EXTRACT
-    FILTER --> EXTRACT
-    EXTRACT --> EVAL
-    EVAL --> AGGR_H & AGGR_D & AGGR_W & AGGR_M
-    AGGR_H --> RENDER_H
-    AGGR_D --> RENDER_D
-    AGGR_W --> RENDER_W
-    AGGR_M --> RENDER_M
-    RENDER_H & RENDER_D & RENDER_W & RENDER_M --> CONVERT
-    CONVERT --> WB
-    EXTRACT --> WB
-    WB --> S1 & S2
-    S1 & S2 --> DOWNLOAD
 ```
 
 ---
 
-## 3. Desain Tata Letak Multi-Sheet (*Workbook Layout Specification*)
+## 3. Spesifikasi Tampilan Sheet 1 (`SUHU AREA`)
 
-### 3.1. Sheet 1: `Dashboard & Grafik`
-Lembar kerja ini diformat sebagai laporan eksekutif (*Executive Dashboard*) siap cetak (*print-friendly*):
+Format Sheet 1 mengadopsi struktur standar lembar kendali mutu pabrik (*QC Micro-Climate Matrix Sheet*):
+
+### 3.1. Blok Header Laporan
+* **Baris 2**: Kolom B memuat teks `BULAN`, Kolom C memuat nama bulan/periode (misal: `OCTOBER 2026` atau rentang tanggal terpilih).
+
+### 3.2. Blok Tabel 1: `SUHU AREA DRYROOM` (Area 502)
+* **Baris 3**: Judul Blok: **`SUHU AREA DRYROOM`** (Teks tebal, latar belakang abu-abu terang/biru muda).
+* **Baris 5**: Header Kolom:
+  * Kolom B: **`JAM`**
+  * Kolom C: **`AVG`** (Rata-rata horisontal per jam)
+  * Kolom D s/d Kolom N: Tanggal-tanggal dinamis (misal: `2026-10-01`, `2026-10-02`, dst., diformat tanggal `YYYY-MM-DD` atau `DD-MMM`).
+* **Baris 6 s/d 15 (Suhu Ruangan - 10 Jam Sampling)**:
+  * Baris 6: Jam `07:00:00` | Kolom AVG: `=AVERAGE(D6:Z6)` | Data Suhu per tanggal (°C)
+  * Baris 7: Jam `08:00:00` | Kolom AVG: `=AVERAGE(D7:Z7)` | Data Suhu per tanggal (°C)
+  * Baris 8: Jam `09:00:00` | Kolom AVG: `=AVERAGE(D8:Z8)` | Data Suhu per tanggal (°C)
+  * Baris 9: Jam `10:00:00` | Kolom AVG: `=AVERAGE(D9:Z9)` | Data Suhu per tanggal (°C)
+  * Baris 10: Jam `11:00:00` | Kolom AVG: `=AVERAGE(D10:Z10)` | Data Suhu per tanggal (°C)
+  * Baris 11: Jam `12:00:00` | Kolom AVG: `=AVERAGE(D11:Z11)` | Data Suhu per tanggal (°C)
+  * Baris 12: Jam `13:00:00` | Kolom AVG: `=AVERAGE(D12:Z12)` | Data Suhu per tanggal (°C)
+  * Baris 13: Jam `14:00:00` | Kolom AVG: `=AVERAGE(D13:Z13)` | Data Suhu per tanggal (°C)
+  * Baris 14: Jam `15:00:00` | Kolom AVG: `=AVERAGE(D14:Z14)` | Data Suhu per tanggal (°C)
+  * Baris 15: Jam `16:00:00` | Kolom AVG: `=AVERAGE(D15:Z15)` | Data Suhu per tanggal (°C)
+* **Baris 16 s/d 25 (Kelembapan Ruangan - 10 Jam Sampling)**:
+  * Baris 16 s/d 25: Jam `07:00:00` s/d `16:00:00`
+  * Kolom AVG: `=AVERAGE(D{r}:Z{r})`
+  * Format Sel: Persentase `0%` (contoh tampil: `58%`, `55%`, `62%`).
+* **Baris 26 (Status Cuaca Luar)**:
+  * Teks: **`CUACA`**
+  * Nilai per tanggal: Simbol inisial cuaca standar pabrik: **`C`** (Cerah), **`M`** (Mendung), **`H`** (Hujan) ditarik dari tabel `weather_aoi5`.
+* **Baris 27 (Rata-rata Suhu Harian)**:
+  * Teks: **`AVERAGE TEMP`**
+  * Kolom AVG: `=AVERAGE(D27:Z27)`
+  * Kolom per tanggal: Formula Excel vertikal: `=AVERAGE(D6:D15)`
+* **Baris 28 (Rata-rata Kelembapan Harian)**:
+  * Teks: **`AERAGE HUMIDITY`**
+  * Kolom AVG: `=AVERAGE(D28:Z28)`
+  * Kolom per tanggal: Formula Excel vertikal: `=AVERAGE(D16:D25)` (format `0%`)
+
+---
+
+### 3.3. Blok Tabel 2: `SUHU AREA FOLDING` (Area 501)
+Ditempatkan di bawah blok Dry Room (setelah jeda 2 baris pemisah) dengan struktur identik:
+* **Baris 31**: Judul Blok: **`SUHU AREA FOLDING`**
+* **Baris 33**: Header Kolom: `JAM`, `AVG`, dan kolom-kolom tanggal.
+* **Baris 34 s/d 43**: Data Suhu 10 Jam Sampling (`07:00` s/d `16:00`).
+* **Baris 44 s/d 53**: Data Kelembapan 10 Jam Sampling (`07:00` s/d `16:00`, format `0%`).
+* **Baris 54**: Baris **`CUACA`** (`C`, `M`, `H`).
+* **Baris 55**: Baris **`AVERAGE TEMP`** (`=AVERAGE(...)` vertikal untuk suhu folding).
+* **Baris 56**: Baris **`AERAGE HUMIDITY`** (`=AVERAGE(...)` vertikal untuk kelembapan folding).
+
+---
+
+### 3.4. Tata Letak Visual Sheet 1 (Skema Posisi Baris & Kolom)
 
 ```text
-+----------------------------------------------------------------------------------------------------+
-| [LOGO AOI]  PT APPAREL ONE INDONESIA - FACTORY 5                                                   |
-|             EXECUTIVE SUMMARY & GRAFIK TREN TEMPERATURE & HUMIDITY                                 |
-|             Periode Data: 01 Nov 2026 s/d 10 Nov 2026 | Dibuat: 10 Nov 2026 08:00 WIB              |
-+----------------------------------------------------------------------------------------------------+
-| [ KPI 1: FOLDING AREA (501) ]   [ KPI 2: DRY ROOM (502) ]       [ KPI 3: KEPATUHAN BATAS AMAN ]    |
-| Avg Suhu : 28.4 °C (Min/Max)    Avg Suhu : 27.2 °C (Min/Max)    Batas Acuan : Suhu <=30°C, Hum<=60%|
-| Avg Humid: 52.1 %  (Min/Max)    Avg Humid: 48.6 %  (Min/Max)    Kepatuhan   : 98.5% (Aman)         |
-| Status   : OPTIMAL              Status   : OPTIMAL              Pelanggaran : 7 jam dari 480 jam   |
-+----------------------------------------------------------------------------------------------------+
-|                                                                                                    |
-|  [ PANEL 1: GRAFIK TREN FLUKTUASI PER JAM (HOURLY) ]                                               |
-|  - Dilengkapi Garis Merah Horizontal: Batas Suhu 30°C & Batas Humidity 60%                         |
-|                                                                                                    |
-+----------------------------------------------------------------------------------------------------+
-|                                                                                                    |
-|  [ PANEL 2: GRAFIK TREN RATA-RATA PER HARI (DAILY) ]                                               |
-|  - Menampilkan rata-rata harian dengan rentang Min-Max serta Garis Batas 30°C / 60%                |
-|                                                                                                    |
-+----------------------------------------------------------------------------------------------------+
-|                                                                                                    |
-|  [ PANEL 3: GRAFIK TREN RATA-RATA PER MINGGU (WEEKLY) ]                                            |
-|  - Evaluasi stabilitas mingguan terhadap ambang batas acuan 30°C & 60%                             |
-|                                                                                                    |
-+----------------------------------------------------------------------------------------------------+
-|                                                                                                    |
-|  [ PANEL 4: GRAFIK TREN RATA-RATA PER BULAN (MONTHLY) ]                                            |
-|  - Analisis tren jangka panjang per bulan terhadap ambang batas acuan 30°C & 60%                   |
-|                                                                                                    |
-+----------------------------------------------------------------------------------------------------+
-| TABEL RINGKASAN AGREGASI HARIAN / MINGGUAN                                                         |
-| Tanggal | Avg Suhu 501 | Min/Max | Avg Hum 501 | Avg Suhu 502 | Min/Max | Avg Hum 502 | Status Acuan|
-+----------------------------------------------------------------------------------------------------+
++---+--------------------+--------+------------+------------+-----+------------+
+|   |         B          |   C    |     D      |     E      | ... |     Z      |
++---+--------------------+--------+------------+------------+-----+------------+
+| 2 | BULAN              | OCT 26 |            |            |     |            |
+| 3 | SUHU AREA DRYROOM  |        |            |            |     |            |
+| 5 | JAM                | AVG    | 2026-10-01 | 2026-10-02 | ... | 2026-10-31 |
+| 6 | 07:00:00           | =AVG() |    25.2    |    25.5    | ... |    25.0    |
+|...| ... (s/d 16:00)    | =AVG() |    ...     |    ...     | ... |    ...     |
+|15 | 16:00:00           | =AVG() |    26.1    |    25.8    | ... |    25.4    |
+|16 | 07:00:00 (Humid)   | =AVG() |    58%     |    57%     | ... |    56%     |
+|...| ... (s/d 16:00)    | =AVG() |    ...     |    ...     | ... |    ...     |
+|25 | 16:00:00 (Humid)   | =AVG() |    56%     |    55%     | ... |    57%     |
+|26 | CUACA              |        |     C      |     M      | ... |     C      |
+|27 | AVERAGE TEMP       | =AVG() | =AVERAGE() | =AVERAGE() | ... | =AVERAGE() |
+|28 | AERAGE HUMIDITY    | =AVG() | =AVERAGE() | =AVERAGE() | ... | =AVERAGE() |
++---+--------------------+--------+------------+------------+-----+------------+
+|   | [ Jeda Baris Kosong ]                                                    |
++---+--------------------+--------+------------+------------+-----+------------+
+|31 | SUHU AREA FOLDING  |        |            |            |     |            |
+|33 | JAM                | AVG    | 2026-10-01 | 2026-10-02 | ... | 2026-10-31 |
+|34 | 07:00 s/d 16:00    | =AVG() |  (Suhu 501 per tanggal)                  |
+|44 | 07:00 s/d 16:00    | =AVG() |  (Kelembapan 501 per tanggal dalam %)     |
+|54 | CUACA              |        |     C      |     M      | ... |     C      |
+|55 | AVERAGE TEMP       | =AVG() | =AVERAGE() | =AVERAGE() | ... | =AVERAGE() |
+|56 | AERAGE HUMIDITY    | =AVG() | =AVERAGE() | =AVERAGE() | ... | =AVERAGE() |
++---+--------------------+--------+------------+------------+-----+------------+
+|   | [ Jeda Baris Kosong ]                                                    |
++---+--------------------+--------+------------+------------+-----+------------+
+|60 | OPSI A: GRAFIK NATIVE DINAMIS EXCEL (DI BAWAH TABEL MATRIKS)             |
+|   | 1. Grafik Tren Harian Rata-rata Suhu (Dry Room vs Folding Area) + 30°C   |
+|   | 2. Grafik Tren Harian Rata-rata Kelembapan (Dry Room vs Folding) + 60%   |
+|   | 3. Grafik Profil Fluktuasi Jam Sampling (07:00 - 16:00)                  |
+|   | 4. Grafik Tren Evaluasi Mingguan / Bulanan                               |
++---+--------------------+--------+------------+------------+-----+------------+
 ```
 
-### 3.2. Sheet 2: `Data Detail Historis`
-Lembar kerja ini memuat seluruh data mentah dari database untuk kebutuhan audit kepatuhan (*compliance audit*):
-* **Kolom 1**: No Urut
-* **Kolom 2**: Factory (`AOI 5`)
-* **Kolom 3**: ID Location (`501` / `502`)
-* **Kolom 4**: Nama Lokasi (*Folding Area* / *Dry Room*)
-* **Kolom 5**: Temperature (°C) — *dengan format 1 desimal. Jika nilai > 30°C, sel diberi warna latar merah muda dan teks merah tebal*
-* **Kolom 6**: Humidity (%) — *dengan format 1 desimal. Jika nilai > 60%, sel diberi warna latar merah muda dan teks merah tebal*
-* **Kolom 7**: Status Kepatuhan (*AMAN* jika Suhu $\le 30^\circ\text{C}$ & Hum $\le 60\%$, *ALERT* jika melampaui)
-* **Kolom 8**: Status Cuaca Luar (*CERAH* / *MENDUNG* / *HUJAN*)
-* **Kolom 9**: Tanggal & Waktu Pencatatan (`YYYY-MM-DD HH:mm:ss`)
-* **Kolom 10**: Nama Hari (*Day Name*)
-* **Gaya Sel**: Header berwarna biru korporat (#2B4C7E), tulisan putih tebal, garis batas (*thin borders*), dan warna baris selang-seling (*zebra striping* #F8F9FA).
+---
+
+## 4. Algoritma Penarikan Data Jam Sampling (*Nearest Timestamp Matching*)
+
+Agar data matriks pada jam 07:00 s/d 16:00 terisi akurat meskipun waktu rekaman sensor di database memiliki selisih detik atau menit:
+
+1. **Definisi Slot Jam Sampling**:
+   $$\text{Slots} = \{ 07:00, 08:00, 09:00, 10:00, 11:00, 12:00, 13:00, 14:00, 15:00, 16:00 \}$$
+2. **Pengelompokan Rekaman Sensor**:
+   Seluruh data hasil query dikelompokkan berdasarkan `[id_location][YYYY-MM-DD]`.
+3. **Pencarian Selisih Waktu Terkecil (*Nearest Distance*)**:
+   Untuk setiap tanggal $T$ dan slot jam target $H$, sistem mencari rekaman dengan:
+   $$\Delta t = \min_{r \in \text{Records}(T)} |\text{timestamp}(r) - \text{target}(T, H)|$$
+   * Batas toleransi valid: $|\Delta t| \le 45\text{ menit}$.
+   * Jika ada snapshot dalam batas toleransi, ambil nilai `temp` dan `humidity`.
+   * Jika tidak ada data sensor pada jendela waktu tersebut (misal pabrik libur pada hari Minggu atau sensor mati), sel dibiarkan kosong `null` (sehingga formula `=AVERAGE(...)` Excel tidak terdistorsi oleh angka 0).
+4. **Pencarian Inisial Cuaca**:
+   Diambil status cuaca luar pada hari bersangkutan:
+   * `Cerah` / `Sunny` / `Clear` $\rightarrow$ **`C`**
+   * `Mendung` / `Cloudy` / `Partly Cloudy` $\rightarrow$ **`M`**
+   * `Hujan` / `Rain` / `Storm` $\rightarrow$ **`H`**
 
 ---
 
-## 4. Logika Agregasi Data 4 Granularitas Waktu & Batas Acuan
+## 5. Konfigurasi Grafik Native Dinamis (Opsi A)
 
-Untuk menghasilkan 4 grafik yang akurat dari dataset yang ditarik, modul JavaScript akan memproses data melalui 4 algoritma agregasi:
-
-### A. Granularitas 1: Per Jam (*Hourly*)
-* **Sumber Data**: Setiap baris data record dari sensor `501` dan `502`.
-* **Sumbu X**: Label waktu berformat `DD MMM HH:00` (contoh: `01 Nov 08:00`).
-* **Sumbu Y (Dual Axis)**:
-  * Kiri: Suhu dalam °C (skala 10–40°C).
-  * Kanan: Kelembapan dalam % (skala 30–100%).
-* **Garis Referensi**:
-  * Garis Merah Solid pada **Y1 = 30°C** (*Batas Aman Suhu Maks*).
-  * Garis Merah Putus-putus pada **Y2 = 60%** (*Batas Aman Humidity Maks*).
-
-### B. Granularitas 2: Per Hari (*Daily*)
-* **Pengelompokan**: Kunci tanggal `YYYY-MM-DD`.
-* **Perhitungan**:
-  $$\text{Avg Temp} = \frac{\sum \text{Temp}}{n}, \quad \text{Min Temp} = \min(\text{Temp}), \quad \text{Max Temp} = \max(\text{Temp})$$
-  $$\text{Avg Humid} = \frac{\sum \text{Humid}}{n}, \quad \text{Min Humid} = \min(\text{Humid}), \quad \text{Max Humid} = \max(\text{Humid})$$
-* **Sumbu X**: Label tanggal `DD MMM YYYY` (contoh: `01 Nov 2026`).
-* **Visualisasi**: Garis rata-rata harian dengan area pita batas (*min-max band*) serta garis acuan $30^\circ\text{C}$ dan $60\%$.
-
-### C. Granularitas 3: Per Minggu (*Weekly*)
-* **Pengelompokan**: Berdasarkan nomor minggu ISO-8601 atau rentang 7 hari berturut-turut (`Minggu ke-W (Tgl - Tgl)`).
-* **Perhitungan**: Rata-rata suhu dan kelembapan untuk setiap minggu operasional dibandingkan dengan batas acuan $30^\circ\text{C}$ dan $60\%$.
-* **Sumbu X**: Label minggu (contoh: `W44 (27 Okt - 02 Nov)`, `W45 (03 Nov - 09 Nov)`).
-
-### D. Granularitas 4: Per Bulan (*Monthly*)
-* **Pengelompokan**: Kunci bulan `YYYY-MM`.
-* **Perhitungan**: Rata-rata bulanan, suhu tertinggi bulanan, dan kelembapan terendah bulanan dibandingkan dengan batas acuan $30^\circ\text{C}$ dan $60\%$.
-* **Sumbu X**: Label bulan (contoh: `Okt 2026`, `Nov 2026`).
+Grafik dibuat menggunakan **`PhpOffice\PhpSpreadsheet\Chart\Chart`** dengan karakteristik:
+1. **Dinamis & Interaktif**:
+   * Sumbu X dan Seri Data merujuk langsung ke sel-sel pada Sheet:
+     * Seri Suhu Dry Room $\rightarrow$ merujuk ke baris `AVERAGE TEMP` Dry Room (`'SUHU AREA'!$D$27:$Z$27`).
+     * Seri Suhu Folding $\rightarrow$ merujuk ke baris `AVERAGE TEMP` Folding (`'SUHU AREA'!$D$55:$Z$55`).
+     * Sumbu Kategori (Tanggal) $\rightarrow$ merujuk ke header tanggal (`'SUHU AREA'!$D$5:$Z$5`).
+   * **Jika pengguna mengedit angka di sel matriks Excel, grafik seketika ter-update otomatis**.
+2. **Garis Batas Acuan (*Threshold Line*)**:
+   * Garis horizontal Merah pada level **`30.0 °C`** untuk grafik temperatur.
+   * Garis horizontal Merah pada level **`60.0 %`** (`0.60`) untuk grafik kelembapan.
+3. **Tata Letak Panel Grafik (Opsi A)**:
+   * **Chart 1**: Tren Rata-rata Suhu Harian (Dry Room vs Folding + Batas 30°C) $\rightarrow$ Sel B60 s/d M78.
+   * **Chart 2**: Tren Rata-rata Kelembapan Harian (Dry Room vs Folding + Batas 60%) $\rightarrow$ Sel N60 s/d Y78.
+   * **Chart 3**: Tren Jam Sampling Rata-rata (07:00 - 16:00) $\rightarrow$ Sel B80 s/d M98.
+   * **Chart 4**: Tren Mingguan / Bulanan $\rightarrow$ Sel N80 s/d Y98.
 
 ---
 
-## 5. Spesifikasi Teknis Grafik (Chart Configuration)
+## 6. Spesifikasi Sheet 2 (`Data Detail Historis`)
 
-Keempat grafik akan dikonfigurasi dengan standar visual SCADA / Industrial Monitoring:
-1. **Pewarnaan Seri Standar Pabrik**:
-   * Suhu Folding Area (`501`): **Oranye Koral** (`#E67E22`)
-   * Kelembapan Folding Area (`501`): **Biru Safir** (`#2980B9`)
-   * Suhu Dry Room (`502`): **Kuning Mustard** (`#F39C12`)
-   * Kelembapan Dry Room (`502`): **Biru Teal** (`#16A085`)
-   * **Batas Acuan Aman Suhu (30°C)**: **Garis Horizontal Merah Tegas (`#E74C3C`, width: 2px)** dengan label *"Batas Acuan Suhu (30°C)"*
-   * **Batas Acuan Aman Humidity (60%)**: **Garis Horizontal Merah Putus-putus (`#C0392B`, dash: [6, 4], width: 2px)** dengan label *"Batas Acuan Humidity (60%)"*
-2. **Kualitas Gambar Ekspor**:
-   * Resolusi kanvas diatur ke skala **2x Retina Display** (`width: 1200px, height: 450px`).
-   * Menggunakan format gambar PNG tanpa latar belakang hitam (*transparent/clean white background*).
-3. **Penyematan di Excel**:
-   * Gambar grafik disisipkan menggunakan metode `workbook.addImage()` dan diikat ke sel yang presisi (`tl: { col: 1, row: ... }, ext: { width: 900, height: 350 }`) sehingga grafik tidak bergeser saat kolom di-resize.
+Lembar kerja ini memuat rekaman historis lengkap untuk kebutuhan audit:
+* **9 Kolom Standar** (Kolom *Status Acuan* ditiadakan):
+  1. `No`
+  2. `Factory` (`AOI 5`)
+  3. `Id Location` (`501` / `502`)
+  4. `Location` (`Folding Area` / `Dry Room`)
+  5. `Temperature (C)` (Format angka `0.0`, sel merah muda jika $> 30.0^\circ\text{C}$)
+  6. `Humidity (%)` (Format angka `0.0%`, sel merah muda jika $> 60.0\%$)
+  7. `Weather` (`CERAH` / `MENDUNG` / `HUJAN`)
+  8. `Record Time` (`YYYY-MM-DD HH:mm:ss`)
+  9. `Day Name` (`Monday`, `Tuesday`, dst.)
 
 ---
 
-## 6. Rincian Modifikasi File Proyek
+## 7. Rincian File yang Dimodifikasi
 
-| File | Status | Peran & Rincian Perubahan |
+| File Target | Aksi | Deskripsi Perubahan |
 | :--- | :---: | :--- |
-| `js/exceljs.min.js` | **File Baru** | Pustaka pembuatan workbook `.xlsx` mandiri berbasis JavaScript di browser. |
-| `report/temperature/aoi5/index.php` | **Modifikasi** | 1. Memanggil pustaka `js/exceljs.min.js`.<br/>2. Mengganti tombol bawaan `excel` DataTables dengan action handler custom.<br/>3. Mengonfigurasi batas acuan: `TEMP_LIMIT = 30` dan `HUM_LIMIT = 60`.<br/>4. Menambahkan fungsi agregasi waktu (`aggregateHourly`, `aggregateDaily`, `aggregateWeekly`, `aggregateMonthly`).<br/>5. Menambahkan modul *off-screen Canvas render* untuk 4 grafik lengkap dengan garis batas acuan 30°C dan 60%.<br/>6. Mengonfigurasi pembuatan Sheet 1 (Dashboard, KPI kepatuhan, 4 Grafik) & Sheet 2 (Data Detail dengan highlight merah jika melampaui batas).<br/>7. Menambahkan indikator visual loading (*spinner*) saat file sedang digenerate. |
+| `report/temperature/aoi5/export_excel_native.php` | **Tulis Ulang (*Rewrite*)** | 1. Implementasi parser matriks horisontal 10 jam (07:00 - 16:00).<br/>2. Penambahan fungsi *nearest timestamp matching* $\pm 45$ menit.<br/>3. Format persentase untuk seluruh baris kelembapan.<br/>4. Penulisan formula Excel dinamis `=AVERAGE(...)` untuk baris dan kolom.<br/>5. Pemetaan inisial cuaca `C`, `M`, `H`.<br/>6. Penempatan 4 Grafik Native Dinamis di bawah tabel matriks (Opsi A).<br/>7. Penataan Sheet 2 (9 kolom tanpa Status Acuan). |
+| `RENCANA_IMPLEMENTASI_EKSPORT_EXCEL_GRAFIK_AOI5.md` | **Diperbarui** | Menjadi acuan dokumentasi resmi desain matriks horisontal. |
 
 ---
 
-## 7. Rencana Jadwal Eksekusi (*Execution Roadmap*)
+## 8. Langkah Eksekusi (*Implementation Steps*)
 
-Implementasi akan segera dimulai dengan tahapan berikut:
+Setelah pengguna menyetujui rencana ini:
 
-### Langkah 1: Persiapan Asset Pustaka
-- Mengunduh dan menempatkan `js/exceljs.min.js` ke folder proyek `js/`.
-- Memverifikasi ketersediaan logo perusahaan `logo_aoi.png` untuk header Excel.
+```mermaid
+flowchart LR
+    STEP1["1. Penulisan Ulang Skrip export_excel_native.php"] --> STEP2["2. Uji Sintaks PHP (php -l)"]
+    STEP2 --> STEP3["3. Eksekusi Script & Validasi File Excel"]
+    STEP3 --> STEP4["4. Verifikasi Formula & Chart Dinamis di Excel"]
+    STEP4 --> STEP5["5. Selesai & Laporan Siap Pakai"]
+```
 
-### Langkah 2: Pembangunan Mesin Agregasi Data & Canvas Render
-- Membuat fungsi JavaScript pengelompok data per jam, per hari, per minggu, dan per bulan.
-- Mengonfigurasi 4 template grafik menggunakan Canvas 2D API / Chart engine dengan penyematan garis batas acuan:
-  - **Suhu: 30 °C** (Merah tegas)
-  - **Kelembapan: 60 %** (Merah putus-putus)
-- Menguji konversi kanvas ke data URL base64 PNG dengan ketajaman tinggi.
-
-### Langkah 3: Integrasi Penggantian Tombol di DataTables
-- Memodifikasi inisialisasi tombol DataTables di [`report/temperature/aoi5/index.php`](file:///e:/Apparel/Enviro/enviro/report/temperature/aoi5/index.php).
-- Menggantikan tombol `extend: 'excel'` lama dengan custom button `action: function(e, dt, button, config) { ... }`.
-- Menambahkan *loading state* pada tombol ("Sedang Menyusun 4 Grafik & File Excel...").
-
-### Langkah 4: Penyusunan Template ExcelJS (Multi-Sheet)
-- Menyusun Sheet 1: Header logo, kartu KPI (termasuk % kepatuhan $\le 30^\circ\text{C}$ & $\le 60\%$), 4 gambar grafik, dan tabel ringkasan agregasi.
-- Menyusun Sheet 2: Tabel seluruh data detail dengan penandaan baris/sel merah untuk data $> 30^\circ\text{C}$ atau $> 60\%$.
-- Pengujian unduh otomatis (`saveAs` ke file `.xlsx`).
-
-### Langkah 5: Uji Coba & Validasi Kualitas (*QA*)
-- Menguji ekspor pada berbagai filter tanggal (Hari ini, 7 hari, 30 hari).
-- Membuka file di Microsoft Excel, Google Sheets, dan WPS Office untuk memastikan:
-  - Sheet 1 dan Sheet 2 terbentuk rapi.
-  - Garis batas acuan 30°C dan 60% terlihat jelas pada seluruh grafik.
-  - Nilai yang melampaui batas tersorot dengan jelas.
+1. **Langkah 1**: Menulis ulang logika penyusunan Sheet 1 di [`report/temperature/aoi5/export_excel_native.php`](file:///e:/Apparel/Enviro/enviro/report/temperature/aoi5/export_excel_native.php) agar membentuk matriks persis sesuai spesifikasi di atas.
+2. **Langkah 2**: Memverifikasi sintaks menggunakan `php -l report/temperature/aoi5/export_excel_native.php`.
+3. **Langkah 3**: Menjalankan pengujian pembuatan file `.xlsx` dengan data simulasi maupun data riil di database.
+4. **Langkah 4**: Memeriksa file output untuk memastikan formula `=AVERAGE(...)` bekerja otomatis dan grafik berada persis di bawah tabel (Opsi A).
 
 ---
 
-*Rencana ini telah diperbarui dengan batas acuan Temperature = 30°C dan Humidity = 60%, dan siap untuk dieksekusi.*
+*Dokumen rencana ini telah disesuaikan dengan seluruh 4 poin arahan pengguna. Mohon konfirmasi persetujuan Anda untuk memulai eksekusi penulisan kode.*

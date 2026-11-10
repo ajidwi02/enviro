@@ -228,15 +228,23 @@ Halaman laporan memungkinkan tim Engineering, QC, dan Manajer Pabrik untuk melih
    ```
 2. **Keamanan Query (Sanitasi SQL)**:
    Input tanggal dari *DateRangePicker* disaring ketat menggunakan `mysqli_real_escape_string` untuk mencegah serangan celah *SQL Injection*.
-3. **Fitur Ekspor Excel dengan Grafik Native Dinamis (PhpSpreadsheet)**:
-   Tombol ekspor Excel dihubungkan ke backend service [`report/temperature/aoi5/export_excel_native.php`](file:///e:/Apparel/Enviro/enviro/report/temperature/aoi5/export_excel_native.php) yang menghasilkan file `.xlsx` dengan **Chart Native Dinamis Microsoft Excel** (bukan gambar statis):
+3. **Fitur Ekspor Excel Format Matriks Horisontal Pabrik & Grafik Native Dinamis (PhpSpreadsheet)**:
+   Tombol ekspor Excel dihubungkan ke backend service [`report/temperature/aoi5/export_excel_native.php`](file:///e:/Apparel/Enviro/enviro/report/temperature/aoi5/export_excel_native.php) yang menghasilkan file `.xlsx` dengan format kendali mutu standar pabrik (*QC Micro-Climate Matrix Sheet*):
    * **Multi-Sheet**:
-     * **Sheet 1 (`Dashboard & Grafik`)**: Header PT Apparel One Indonesia, 4 Kartu KPI (Rata-rata, Min, Max, % Kepatuhan), **4 Native Line Charts (Per Jam, Per Hari, Per Minggu, Per Bulan)** yang terhubung langsung ke formula sel data, serta Tabel Ringkasan Agregasi Harian.
-     * **Sheet 2 (`Data Detail Historis`)**: Seluruh data per jam (9 kolom: No, Factory, ID Location, Location, Temperature, Humidity, Weather, Record Time, Day Name) dengan format angka desimal dan penandaan sel merah bagi suhu $> 30.0^\circ\text{C}$ atau kelembapan $> 60.0\%$.
-     * **Sheet 3 (`Chart Data Source`)**: Lembar kerja rujukan formula dinamis yang menjadi sumber penggerak 4 grafik. Jika angka diubah di Excel, grafik langsung bergerak secara dinamis.
+     * **Sheet 1 (`SUHU AREA`)**:
+       * **Blok Matriks 1 (`SUHU AREA DRYROOM` - 502)**: Matriks horisontal dengan kolom tanggal dinamis sesuai rentang filter web, kolom `AVG` (`=AVERAGE()`), 10 baris Suhu jam sampling (07:00 – 16:00, nearest match $\pm 45$ menit), 10 baris Kelembapan jam sampling (format persentase `0%`), baris inisial `CUACA` (`C`/`M`/`H`), baris `AVERAGE TEMP` harian (`=AVERAGE()`), dan baris `AERAGE HUMIDITY` harian (`=AVERAGE()`).
+       * **Blok Matriks 2 (`SUHU AREA FOLDING` - 501)**: Format matriks identik dengan Blok 1 untuk area folding.
+       * **4 Native Line Charts (Opsi A - Di Bawah Matriks)**:
+         1. *Grafik Tren Rata-rata Suhu Harian (Dry Room vs Folding vs Batas Aman 30°C)*
+         2. *Grafik Tren Rata-rata Kelembapan Harian (Dry Room vs Folding vs Batas Aman 60%)*
+         3. *Grafik Profil Fluktuasi Rata-rata Suhu Jam Sampling (07:00 – 16:00)*
+         4. *Grafik Profil Fluktuasi Rata-rata Kelembapan Jam Sampling (07:00 – 16:00)*
+       * **Koneksi Dinamis**: Grafik terhubung langsung ke formula baris matriks dan kolom tanggal. Jika angka diubah di Excel, grafik langsung bergerak secara dinamis.
+     * **Sheet 2 (`Data Detail Historis`)**: Seluruh rekaman historis database (9 kolom bersih: No, Factory, ID Location, Location, Temperature, Humidity, Weather, Record Time, Day Name) dengan format angka desimal dan penandaan sel merah bagi suhu $> 30.0^\circ\text{C}$ atau kelembapan $> 60.0\%$.
+     * **Sheet 3 (`Chart Data Source`)**: Lembar kerja rujukan formula dinamis dan garis batas acuan (30°C / 60%).
    * **Batas Acuan Aman Pabrik**:
      * Sumbu Suhu: Garis acuan horizontal pada **30.0 °C**.
-     * Sumbu Kelembapan: Garis acuan horizontal pada **60.0 %**.
+     * Sumbu Kelembapan: Garis acuan horizontal pada **60.0 %** (`0.60`).
 
 ---
 
