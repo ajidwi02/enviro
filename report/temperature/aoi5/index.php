@@ -276,7 +276,6 @@
 								<th>Location</th>
 								<th>Temperature (C)</th>
 								<th>Humidity (%)</th>
-								<th>Status Acuan</th>
 								<th>Weather</th>
 								<th>Record Time</th>
 								<th>Day Name</th>
@@ -302,7 +301,6 @@
 
 										$temp_num = is_numeric($Temp) ? floatval($Temp) : 0.0;
 										$humi_num = is_numeric($humi) ? floatval($humi) : 0.0;
-										$is_alert = ($temp_num > 30.0 || $humi_num > 60.0);
 										?>
 										<tr>
 											<td></td>
@@ -311,13 +309,6 @@
 											<td><?php echo $location_name;?></td>
 											<td class="<?php echo ($temp_num > 30.0) ? 'text-danger font-weight-bold' : ''; ?>"><?php echo $Temp;?></td>
 											<td class="<?php echo ($humi_num > 60.0) ? 'text-danger font-weight-bold' : ''; ?>"><?php echo $humi ;?></td>
-											<td>
-												<?php if ($is_alert): ?>
-													<span class="badge-alert"><i class="fe fe-alert-triangle mr-1"></i>ALERT (> Batas)</span>
-												<?php else: ?>
-													<span class="badge-safe"><i class="fe fe-check mr-1"></i>AMAN</span>
-												<?php endif; ?>
-											</td>
 											<td><?php echo $weather ;?></td>
 											<td><?php echo $record_time ;?></td>
 											<td><?php echo $dayname ;?></td>

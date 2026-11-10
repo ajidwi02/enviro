@@ -961,7 +961,6 @@ function exportExcelWithCharts(dt) {
                 { header: 'Lokasi Area', key: 'loc_name', width: 18 },
                 { header: 'Temperature (°C)', key: 'temp', width: 18 },
                 { header: 'Humidity (%)', key: 'humidity', width: 16 },
-                { header: 'Status Batas Acuan', key: 'status_acuan', width: 22 },
                 { header: 'Weather Status', key: 'weather', width: 16 },
                 { header: 'Record Time', key: 'record_time', width: 22 },
                 { header: 'Day Name', key: 'day_name', width: 14 }
@@ -985,7 +984,6 @@ function exportExcelWithCharts(dt) {
                 var item = processed.records[recIdx];
                 var isTempExceed = (item.temp !== null && item.temp > TEMP_SAFE_LIMIT);
                 var isHumExceed = (item.humidity !== null && item.humidity > HUM_SAFE_LIMIT);
-                var isRowAlert = isTempExceed || isHumExceed;
 
                 var dataRow = s2.addRow({
                     no: recIdx + 1,
@@ -994,7 +992,6 @@ function exportExcelWithCharts(dt) {
                     loc_name: item.location_name,
                     temp: item.temp !== null ? item.temp : 0.0,
                     humidity: item.humidity !== null ? item.humidity : 0.0,
-                    status_acuan: isRowAlert ? 'ALERT (> Batas)' : 'AMAN',
                     weather: item.weather_status,
                     record_time: item.record_time,
                     day_name: item.day_name
@@ -1014,7 +1011,6 @@ function exportExcelWithCharts(dt) {
                 dataRow.getCell('loc_name').alignment = { horizontal: 'left' };
                 dataRow.getCell('temp').alignment = { horizontal: 'right' };
                 dataRow.getCell('humidity').alignment = { horizontal: 'right' };
-                dataRow.getCell('status_acuan').alignment = { horizontal: 'center' };
                 dataRow.getCell('weather').alignment = { horizontal: 'center' };
                 dataRow.getCell('record_time').alignment = { horizontal: 'center' };
                 dataRow.getCell('day_name').alignment = { horizontal: 'center' };
@@ -1043,20 +1039,10 @@ function exportExcelWithCharts(dt) {
                     hCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
                     hCell.font = { bold: true, color: { argb: 'FF991B1B' } };
                 }
-
-                // Penandaan Status Batas Acuan
-                var stCell = dataRow.getCell('status_acuan');
-                if (isRowAlert) {
-                    stCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
-                    stCell.font = { bold: true, color: { argb: 'FF991B1B' } };
-                } else {
-                    stCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
-                    stCell.font = { bold: true, color: { argb: 'FF166534' } };
-                }
             }
 
-            // AutoFilter pada Sheet 2
-            s2.autoFilter = 'A1:J1';
+            // AutoFilter pada Sheet 2 (9 Kolom)
+            s2.autoFilter = 'A1:I1';
 
             // 5. Generate Buffer dan Trigger Unduh File
             var dateSuffix = new Date().toISOString().slice(0, 10).replace(/-/g, '');
