@@ -228,8 +228,15 @@ Halaman laporan memungkinkan tim Engineering, QC, dan Manajer Pabrik untuk melih
    ```
 2. **Keamanan Query (Sanitasi SQL)**:
    Input tanggal dari *DateRangePicker* disaring ketat menggunakan `mysqli_real_escape_string` untuk mencegah serangan celah *SQL Injection*.
-3. **Fitur Ekspor**:
-   Tabel didukung pustaka **DataTables Buttons HTML5** yang memungkinkan ekspor instan ke format **CSV** dan **Excel (.xlsx)** untuk pembuatan laporan bulanan atau audit compliance.
+3. **Fitur Ekspor Excel dengan Grafik Native Dinamis (PhpSpreadsheet)**:
+   Tombol ekspor Excel dihubungkan ke backend service [`report/temperature/aoi5/export_excel_native.php`](file:///e:/Apparel/Enviro/enviro/report/temperature/aoi5/export_excel_native.php) yang menghasilkan file `.xlsx` dengan **Chart Native Dinamis Microsoft Excel** (bukan gambar statis):
+   * **Multi-Sheet**:
+     * **Sheet 1 (`Dashboard & Grafik`)**: Header PT Apparel One Indonesia, 4 Kartu KPI (Rata-rata, Min, Max, % Kepatuhan), **4 Native Line Charts (Per Jam, Per Hari, Per Minggu, Per Bulan)** yang terhubung langsung ke formula sel data, serta Tabel Ringkasan Agregasi Harian.
+     * **Sheet 2 (`Data Detail Historis`)**: Seluruh data per jam (9 kolom: No, Factory, ID Location, Location, Temperature, Humidity, Weather, Record Time, Day Name) dengan format angka desimal dan penandaan sel merah bagi suhu $> 30.0^\circ\text{C}$ atau kelembapan $> 60.0\%$.
+     * **Sheet 3 (`Chart Data Source`)**: Lembar kerja rujukan formula dinamis yang menjadi sumber penggerak 4 grafik. Jika angka diubah di Excel, grafik langsung bergerak secara dinamis.
+   * **Batas Acuan Aman Pabrik**:
+     * Sumbu Suhu: Garis acuan horizontal pada **30.0 °C**.
+     * Sumbu Kelembapan: Garis acuan horizontal pada **60.0 %**.
 
 ---
 
@@ -290,10 +297,12 @@ enviro/
 ├── report/
 │   └── temperature/
 │       └── aoi5/
-│           └── index.php      # Halaman riwayat data, filter tanggal, tabel gabungan, & export Excel/CSV
-├── config_temp_humid.php      # Konfigurasi koneksi MySQL database 'enviro'
-├── index.php                  # Halaman portal utama sistem Enviro & background client sync
-└── migration_weather_aoi5.sql # Skrip DDL pembentukan tabel database weather_aoi5
+│           ├── index.php               # Halaman riwayat data, filter tanggal, tabel gabungan, & export
+│           └── export_excel_native.php # Engine ekspor Excel multi-sheet dengan 4 Grafik Native Dinamis (PhpSpreadsheet)
+├── config_temp_humid.php               # Konfigurasi koneksi MySQL database 'enviro'
+├── index.php                           # Halaman portal utama sistem Enviro & background client sync
+├── migration_weather_aoi5.sql          # Skrip DDL pembentukan tabel database weather_aoi5
+└── vendor/                             # Pustaka Composer lokal (PhpSpreadsheet, zipstream, etc.) siap upload via FileZilla
 ```
 
 ---

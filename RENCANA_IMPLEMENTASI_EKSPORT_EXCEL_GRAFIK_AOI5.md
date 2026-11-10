@@ -5,7 +5,7 @@
 **Modul:** Report Temperature & Humidity  
 **Dokumen:** Rencana Implementasi Teknis (*Technical Implementation Plan - Final Approved*)  
 **Tanggal Pembaruan:** 10 November 2026  
-**Status:** **Disetujui Pengguna & Siap Implementasi (*Approved for Implementation*)**  
+**Status:** **Selesai Diimplementasikan (Native Dynamic Charts via PhpSpreadsheet)**  
 
 ---
 
@@ -14,13 +14,14 @@
 Berdasarkan masukan dan arahan spesifik dari pengguna (*user requirements*), implementasi ekspor Excel mengadopsi 4 pilar utama:
 
 1. **Struktur Lembar Kerja (Pilihan: Opsi B - Multi-Sheet)**:
-   * **Sheet 1 (`Dashboard & Grafik`)**: Lembar kerja eksekutif yang memuat Header resmi perusahaan, Kartu KPI Statistik Ringkas (termasuk kepatuhan batas aman), serta **4 Panel Grafik Visual Tren**.
-   * **Sheet 2 (`Data Detail Historis`)**: Lembar kerja data mentah (*raw data*) yang memuat seluruh baris tabel rekaman per jam secara lengkap dengan pemformatan sel profesional dan penandaan nilai yang melampaui batas aman.
-2. **Penempatan Tombol (Pilihan: Opsi 2 - Menggantikan Tombol Excel Lama)**:
-   * Tombol bawaan Excel DataTables yang lama **digantikan secara langsung** oleh tombol ekspor baru berikon Excel.
-   * Saat tombol diklik, sistem secara otomatis mengeksekusi *pipeline* pembuatan workbook ExcelJS multi-sheet lengkap dengan 4 grafik dan tabel data.
-3. **Granularitas Grafik (Pilihan: 4 Dimensi Waktu Sekaligus)**:
-   * Grafik tren disajikan dalam **4 resolusi waktu**:
+   * **Sheet 1 (`Dashboard & Grafik`)**: Lembar kerja eksekutif yang memuat Header resmi perusahaan, Kartu KPI Statistik Ringkas (termasuk kepatuhan batas aman), **4 Native Dynamic Line Charts (Per Jam, Hari, Minggu, Bulan)**, serta Tabel Agregasi Harian.
+   * **Sheet 2 (`Data Detail Historis`)**: Lembar kerja data mentah (*raw data*) dengan 9 kolom standar (kolom Status Acuan dihilangkan sesuai permintaan pengguna) dengan pemformatan angka desimal dan penandaan sel merah bagi nilai yang melampaui batas aman.
+   * **Sheet 3 (`Chart Data Source`)**: Lembar rujukan formula dinamis yang terhubung ke objek grafik native Microsoft Excel.
+2. **Penempatan Tombol & Mesin Ekspor (Native Dynamic Excel)**:
+   * Tombol bawaan Excel DataTables yang lama **digantikan secara langsung** oleh tombol ekspor baru berikon Excel: `[ Excel (+ 4 Grafik Dinamis) ]`.
+   * Skrip memanggil backend PHP [`report/temperature/aoi5/export_excel_native.php`](file:///e:/Apparel/Enviro/enviro/report/temperature/aoi5/export_excel_native.php) berbasis **`PhpSpreadsheet`** untuk merakit file `.xlsx` dengan grafik native Excel dinamis (bukan gambar statis).
+3. **Grafik Native Dinamis (Bukan Gambar)**:
+   * Grafik adalah **objek chart asli Microsoft Excel** yang terhubung (*linked by formula*) ke sel data. Jika data sel diedit di Excel, garis grafik otomatis bergerak seketika.
      1. **Tren Per Jam (*Hourly*)**: Detail fluktuasi suhu dan kelembapan jam-demi-jam.
      2. **Tren Per Hari (*Daily*)**: Rata-rata (*Average*), Titik Tertinggi (*Max*), dan Titik Terendah (*Min*) harian.
      3. **Tren Per Minggu (*Weekly*)**: Rata-rata mingguan untuk evaluasi pola kerja dan shift operasional pabrik.

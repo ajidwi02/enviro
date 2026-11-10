@@ -120,10 +120,6 @@
 	<script src="../../../js/jszip.min.js"></script>
 	<script src="../../../js/buttons.html5.min.js"></script>
 
-	<!-- ExcelJS & Mesin Ekspor Multi-Granularity Charts -->
-	<script src="../../../js/exceljs.min.js"></script>
-	<script src="export_excel_charts.js"></script>
-
 	<script>
         var REPORT_DATA = <?php echo json_encode($report_rows); ?>;
         var AOI_LOGO_BASE64 = "<?php echo $logo_base64; ?>";
@@ -143,14 +139,22 @@
                         text: '<i class="fe fe-file-text mr-1"></i> CSV'
                     },
                     {
-                        text: '<i class="fe fe-download mr-1"></i> Excel (+ 4 Grafik Tren)',
+                        text: '<i class="fe fe-download mr-1"></i> Excel (+ 4 Grafik Dinamis)',
                         className: 'btn-excel-custom',
                         attr: {
                             id: 'btnExportExcelChart',
-                            title: 'Ekspor Excel Multi-Sheet Lengkap dengan 4 Grafik Tren & Batas Acuan (30°C / 60%)'
+                            title: 'Ekspor Excel Multi-Sheet Lengkap dengan 4 Grafik Native Dinamis & Batas Acuan (30°C / 60%)'
                         },
                         action: function (e, dt, node, config) {
-                            exportExcelWithCharts(dt);
+                            var rangeVal = $('#reportrange').val() || "<?php echo isset($_GET['range']) ? addslashes($_GET['range']) : ''; ?>";
+                            var exportUrl = 'export_excel_native.php' + (rangeVal ? '?range=' + encodeURIComponent(rangeVal) : '');
+                            var $btn = $(node);
+                            var oldHtml = $btn.html();
+                            $btn.prop('disabled', true).html('<i class="fe fe-loader fe-spin mr-1"></i> Menyiapkan Excel Dinamis...');
+                            window.location.href = exportUrl;
+                            setTimeout(function() {
+                                $btn.prop('disabled', false).html(oldHtml);
+                            }, 3000);
                         }
                     }
                 ] 
