@@ -25,6 +25,12 @@ CREATE TABLE IF NOT EXISTS `weather_aoi5` (
     INDEX `idx_weather_status` (`weather_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Tabel Data Riwayat Cuaca Luar AOI 5';
 
+-- 2. Penyelarasan Record: Pastikan data dengan curah hujan < 10 mm berstatus 'Mendung'
+UPDATE `weather_aoi5` 
+SET `weather_status` = 'Mendung' 
+WHERE `rainfall` < 10.0 AND `weather_status` = 'Hujan';
+
 -- ==============================================================================
 -- End of Migration
 -- ==============================================================================
+

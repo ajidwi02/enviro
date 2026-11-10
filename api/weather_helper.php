@@ -8,20 +8,25 @@
 
 if (!function_exists('classify_weather')) {
     function classify_weather($weather_code, $precipitation, $rain, $cloud_cover) {
-        $rain_codes = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 85, 86, 95, 96, 99];
+        $curah_hujan  = max(floatval($precipitation), floatval($rain));
+        $rain_codes   = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 85, 86, 95, 96, 99];
+        $cloudy_codes = [2, 3, 45, 48];
         
-        // Prioritas 1: Hujan (jika curah hujan > 0 atau kode WMO hujan/gerimis/badai)
-        if (floatval($rain) > 0 || floatval($precipitation) > 0 || in_array((int)$weather_code, $rain_codes)) {
+        // Prioritas 1: Hujan (HANYA jika curah hujan >= 10 mm)
+        if ($curah_hujan >= 1.0) {
             return 'Hujan';
         }
         
-        // Prioritas 2: Mendung (jika kode awan tebal / kabut atau tutupan awan >= 50%)
-        $cloudy_codes = [2, 3, 45, 48];
-        if (in_array((int)$weather_code, $cloudy_codes) || intval($cloud_cover) >= 50) {
+        // Prioritas 2: Mendung
+        // - Curah hujan di bawah 10 mm (> 0 mm s/d < 10 mm tetap dalam kategori Mendung)
+        // - Atau terdapat kode WMO hujan/gerimis tapi curah hujan < 10 mm
+        // - Atau kode WMO berupa awan tebal / kabut
+        // - Atau persentase tutupan awan (cloud cover) >= 50%
+        if ($curah_hujan > 0 || in_array((int)$weather_code, $rain_codes) || in_array((int)$weather_code, $cloudy_codes) || intval($cloud_cover) >= 50) {
             return 'Mendung';
         }
         
-        // Prioritas 3: Cerah
+        // Prioritas 3: Cerah (curah hujan 0 mm dan tutupan awan < 50%)
         return 'Cerah';
     }
 }
@@ -57,6 +62,22 @@ if (!function_exists('sync_weather_aoi5')) {
             
             // Kurang dari 1 jam (3600 detik) -> data jam ini sudah ada di DB, tidak perlu tembak API
             if ($diff_seconds < 3600) {
+                // Re-evaluasi status cuaca berdasarkan aturan klasifikasi terkini (< 10mm = Mendung)
+                $cur_status = classify_weather(
+                    $latest_db_row['weather_code'],
+                    $latest_db_row['rainfall'],
+                    $latest_db_row['rainfall'],
+                    $latest_db_row['cloud_cover']
+                );
+
+                // Sinkronkan update ke DB jika status sebelumnya tercatat 'Hujan' padahal rainfall < 10 mm
+                if ($cur_status !== $latest_db_row['weather_status'] && $conn) {
+                    $safe_new_status = mysqli_real_escape_string($conn, $cur_status);
+                    $safe_id = mysqli_real_escape_string($conn, $latest_db_row['id_transaction']);
+                    @mysqli_query($conn, "UPDATE weather_aoi5 SET weather_status = '$safe_new_status' WHERE id_transaction = '$safe_id'");
+                    $latest_db_row['weather_status'] = $cur_status;
+                }
+
                 return [
                     'factory'          => $factory_name,
                     'location_desc'    => $location_desc,
@@ -113,6 +134,7 @@ if (!function_exists('sync_weather_aoi5')) {
                 $hum_out  = isset($curr['relative_humidity_2m']) ? round(floatval($curr['relative_humidity_2m']), 1) : null;
                 $wind_spd = isset($curr['wind_speed_10m']) ? round(floatval($curr['wind_speed_10m']), 1) : 0.0;
 
+                $curah_hujan = max(floatval($precip), floatval($rain_val));
                 $status_cuaca = classify_weather($w_code, $precip, $rain_val, $cloud);
 
                 $rec_time = !empty($curr['time']) ? str_replace('T', ' ', $curr['time']) : date('Y-m-d H:i:s');
@@ -127,7 +149,7 @@ if (!function_exists('sync_weather_aoi5')) {
                     'weather_status'   => $status_cuaca, // Cerah / Mendung / Hujan
                     'temp_outdoor'     => $temp_out,
                     'humidity_outdoor' => $hum_out,
-                    'rainfall'         => $precip > 0 ? $precip : $rain_val,
+                    'rainfall'         => $curah_hujan,
                     'wind_speed'       => $wind_spd,
                     'cloud_cover'      => $cloud,
                     'weather_code'     => $w_code,
@@ -142,7 +164,7 @@ if (!function_exists('sync_weather_aoi5')) {
                     $safe_status   = mysqli_real_escape_string($conn, $status_cuaca);
                     $s_temp_out    = $temp_out !== null ? floatval($temp_out) : 0.0;
                     $s_hum_out     = $hum_out !== null ? floatval($hum_out) : 0.0;
-                    $s_rain_val    = $precip > 0 ? floatval($precip) : floatval($rain_val);
+                    $s_rain_val    = floatval($curah_hujan);
                     $s_wind_val    = floatval($wind_spd);
                     $s_cloud_val   = intval($cloud);
                     $s_wmo_code    = intval($w_code);
@@ -171,6 +193,8 @@ if (!function_exists('sync_weather_aoi5')) {
                         $ins_res = @mysqli_query($conn, $insert_query);
                         if ($ins_res) {
                             $db_save_status = 'saved_success';
+                            // Sekaligus perbarui record lama jika masih ada yang tersimpan Hujan dengan curah hujan < 10 mm
+                            @mysqli_query($conn, "UPDATE weather_aoi5 SET weather_status = 'Mendung' WHERE rainfall < 1.0 AND weather_status = 'Hujan'");
                         } else {
                             $db_save_status = 'error: ' . mysqli_error($conn);
                         }
@@ -185,11 +209,17 @@ if (!function_exists('sync_weather_aoi5')) {
 
         // 5. Fallback ke rekaman DB terakhir jika Open-Meteo gagal/offline
         if ($latest_db_row) {
+            $fallback_status = classify_weather(
+                $latest_db_row['weather_code'],
+                $latest_db_row['rainfall'],
+                $latest_db_row['rainfall'],
+                $latest_db_row['cloud_cover']
+            );
             return [
                 'factory'          => $factory_name,
                 'location_desc'    => $location_desc,
                 'coordinates'      => "{$latitude}, {$longitude}",
-                'weather_status'   => $latest_db_row['weather_status'],
+                'weather_status'   => $fallback_status,
                 'temp_outdoor'     => floatval($latest_db_row['temp_outdoor']),
                 'humidity_outdoor' => floatval($latest_db_row['humidity_outdoor']),
                 'rainfall'         => floatval($latest_db_row['rainfall']),

@@ -73,9 +73,9 @@ graph TD
 
 2. **Klasifikasi 3 Status Cuaca (Standar Pabrik Tanpa Icon)**:
    Data mentah Open-Meteo diproses oleh fungsi `classify_weather()` dengan hierarki ketat:
-   - **`HUJAN`**: Ditetapkan jika curah hujan/presipitasi $> 0\text{ mm}$ atau kode WMO berada dalam kelompok hujan/gerimis/badai (`51–67`, `80–82`, `95–99`).
-   - **`MENDUNG`**: Ditetapkan jika kode WMO berupa awan tebal/kabut (`2, 3, 45, 48`) atau persentase tutupan awan (*cloud cover*) $\ge 50\%$.
-   - **`CERAH`**: Ditetapkan jika kondisi langit bersih atau cerah berawan (kode WMO `0, 1` dengan tutupan awan $< 50\%$).
+   - **`HUJAN`**: Ditetapkan **hanya jika curah hujan/presipitasi $\ge 10.0\text{ mm}$** (ambang batas hujan lebat/signifikan standar operasional pabrik).
+   - **`MENDUNG`**: Ditetapkan jika curah hujan berada di bawah $10\text{ mm}$ ($> 0\text{ mm}$ s/d $< 10\text{ mm}$ seperti gerimis/hujan ringan), terdapat kode WMO hujan/gerimis tapi curah hujan $< 10\text{ mm}$, kode WMO awan tebal/kabut (`2, 3, 45, 48`), atau persentase tutupan awan (*cloud cover*) $\ge 50\%$.
+   - **`CERAH`**: Ditetapkan jika curah hujan $0\text{ mm}$ dan kondisi langit bersih atau cerah berawan (kode WMO `0, 1` dengan tutupan awan $< 50\%$).
    - Seluruh output teks diseragamkan dalam format huruf kapital (**`CERAH`**, **`MENDUNG`**, **`HUJAN`**) dengan warna badge standar pabrik tanpa penambahan icon gambar.
 
 3. **Hourly Throttling & Penyimpanan Database**:

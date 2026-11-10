@@ -169,6 +169,16 @@
 					  </a>
 					</li>
 				  </ul>
+			    <a class="nav-link pl-3" href="#" data-toggle="collapse" aria-expanded="false">
+				    <span class="ml-1 item-text">Energy</span>
+				</a>
+				<ul class="collapse list-unstyled pl-3" id="tempSubmenuaoi5">
+					<li class="nav-item">
+					    <a class="nav-link pl-3" href="http://iotelectricity.bbi-apparel.com" target="_blank">
+						    <span class="ml-1 item-text">Dashboard</span>
+					    </a>
+					</li>
+				</ul>
 				</li>
 				<!-- End Sub Menu -->
 			  </ul>
@@ -232,8 +242,8 @@
       (function() {
         var mqtt;
         var reconnectTimeout = 5000;
-        // var host = "192.168.51.40";
-        var host = "localhost";
+        var host = "192.168.51.40";
+        //var host = "localhost";
         var port = 8083;
         var connected_flag = 0;
 
