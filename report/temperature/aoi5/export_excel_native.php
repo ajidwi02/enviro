@@ -629,19 +629,33 @@ $sheet1->getRowDimension(58)->setRowHeight(24);
 // ------------------------------------------------------------------------------
 // CHART 1: Tren Rata-rata Suhu Harian (Dry Room vs Folding vs Batas 30°C)
 // ------------------------------------------------------------------------------
-$catDates = [new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!\$D\$5:\${$lastDateColChar}\$5", null, $dCount)];
+$catDatesVal = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!$D$5:${$lastDateColChar}$5", null, $dCount);
+$catDates = [$catDatesVal, $catDatesVal, $catDatesVal];
 
 $lblChart1 = [
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!\$B\$3", null, 1),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!\$B\$31", null, 1),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'Chart Data Source'!\$B\$1", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!$B$3", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!$B$31", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'Chart Data Source'!$B$1", null, 1),
 ];
 
-$valChart1 = [
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!\$D\$27:\${$lastDateColChar}\$27", null, $dCount),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!\$D\$55:\${$lastDateColChar}\$55", null, $dCount),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'Chart Data Source'!\$B\$2:\$B\$" . (1 + $dCount), null, $dCount),
-];
+$val1_dry = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!$D$27:${$lastDateColChar}$27", null, $dCount);
+$val1_dry->setLineWidth(2.25);
+$val1_dry->setLineColorProperties('0284C7'); // Biru Sky
+$val1_dry->setPointMarker('circle');
+$val1_dry->setPointSize(5);
+
+$val1_fold = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!$D$55:${$lastDateColChar}$55", null, $dCount);
+$val1_fold->setLineWidth(2.25);
+$val1_fold->setLineColorProperties('F97316'); // Oranye
+$val1_fold->setPointMarker('diamond');
+$val1_fold->setPointSize(5);
+
+$val1_limit = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'Chart Data Source'!$B$2:$B$" . (1 + $dCount), null, $dCount);
+$val1_limit->setLineWidth(2.0);
+$val1_limit->setLineColorProperties('DC2626'); // Merah Batas 30°C
+$val1_limit->setLineStyleProperty('dash', 'dash');
+
+$valChart1 = [$val1_dry, $val1_fold, $val1_limit];
 
 $seriesChart1 = new DataSeries(
     DataSeries::TYPE_LINECHART,
@@ -669,16 +683,29 @@ $sheet1->addChart($chart1);
 // CHART 2: Tren Rata-rata Kelembapan Harian (Dry Room vs Folding vs Batas 60%)
 // ------------------------------------------------------------------------------
 $lblChart2 = [
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!\$B\$3", null, 1),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!\$B\$31", null, 1),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'Chart Data Source'!\$C\$1", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!$B$3", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!$B$31", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'Chart Data Source'!$C$1", null, 1),
 ];
 
-$valChart2 = [
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!\$D\$28:\${$lastDateColChar}\$28", null, $dCount),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!\$D\$56:\${$lastDateColChar}\$56", null, $dCount),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'Chart Data Source'!\$C\$2:\$C\$" . (1 + $dCount), null, $dCount),
-];
+$val2_dry = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!$D$28:${$lastDateColChar}$28", null, $dCount);
+$val2_dry->setLineWidth(2.25);
+$val2_dry->setLineColorProperties('0284C7'); // Biru Sky
+$val2_dry->setPointMarker('circle');
+$val2_dry->setPointSize(5);
+
+$val2_fold = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!$D$56:${$lastDateColChar}$56", null, $dCount);
+$val2_fold->setLineWidth(2.25);
+$val2_fold->setLineColorProperties('F97316'); // Oranye
+$val2_fold->setPointMarker('diamond');
+$val2_fold->setPointSize(5);
+
+$val2_limit = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'Chart Data Source'!$C$2:$C$" . (1 + $dCount), null, $dCount);
+$val2_limit->setLineWidth(2.0);
+$val2_limit->setLineColorProperties('DC2626'); // Merah Batas 60%
+$val2_limit->setLineStyleProperty('dash', 'dash');
+
+$valChart2 = [$val2_dry, $val2_fold, $val2_limit];
 
 $seriesChart2 = new DataSeries(
     DataSeries::TYPE_LINECHART,
@@ -705,19 +732,33 @@ $sheet1->addChart($chart2);
 // ------------------------------------------------------------------------------
 // CHART 3: Profil Rata-rata Suhu Jam Sampling (07:00 - 16:00)
 // ------------------------------------------------------------------------------
-$catHours = [new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!\$B\$6:\$B\$15", null, 10)];
+$catHoursVal = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!$B$6:$B$15", null, 10);
+$catHours = [$catHoursVal, $catHoursVal, $catHoursVal];
 
 $lblChart3 = [
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!\$B\$3", null, 1),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!\$B\$31", null, 1),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'Chart Data Source'!\$F\$1", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!$B$3", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!$B$31", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'Chart Data Source'!$F$1", null, 1),
 ];
 
-$valChart3 = [
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!\$C\$6:\$C\$15", null, 10),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!\$C\$34:\$C\$43", null, 10),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'Chart Data Source'!\$F\$2:\$F\$11", null, 10),
-];
+$val3_dry = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!$C$6:$C$15", null, 10);
+$val3_dry->setLineWidth(2.25);
+$val3_dry->setLineColorProperties('0284C7'); // Biru Sky
+$val3_dry->setPointMarker('circle');
+$val3_dry->setPointSize(5);
+
+$val3_fold = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!$C$34:$C$43", null, 10);
+$val3_fold->setLineWidth(2.25);
+$val3_fold->setLineColorProperties('F97316'); // Oranye
+$val3_fold->setPointMarker('diamond');
+$val3_fold->setPointSize(5);
+
+$val3_limit = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'Chart Data Source'!$F$2:$F$11", null, 10);
+$val3_limit->setLineWidth(2.0);
+$val3_limit->setLineColorProperties('DC2626'); // Merah Batas 30°C
+$val3_limit->setLineStyleProperty('dash', 'dash');
+
+$valChart3 = [$val3_dry, $val3_fold, $val3_limit];
 
 $seriesChart3 = new DataSeries(
     DataSeries::TYPE_LINECHART,
@@ -745,16 +786,29 @@ $sheet1->addChart($chart3);
 // CHART 4: Profil Rata-rata Kelembapan Jam Sampling (07:00 - 16:00)
 // ------------------------------------------------------------------------------
 $lblChart4 = [
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!\$B\$3", null, 1),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!\$B\$31", null, 1),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'Chart Data Source'!\$G\$1", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!$B$3", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'SUHU AREA'!$B$31", null, 1),
+    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_STRING, "'Chart Data Source'!$G$1", null, 1),
 ];
 
-$valChart4 = [
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!\$C\$16:\$C\$25", null, 10),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!\$C\$44:\$C\$53", null, 10),
-    new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'Chart Data Source'!\$G\$2:\$G\$11", null, 10),
-];
+$val4_dry = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!$C$16:$C$25", null, 10);
+$val4_dry->setLineWidth(2.25);
+$val4_dry->setLineColorProperties('0284C7'); // Biru Sky
+$val4_dry->setPointMarker('circle');
+$val4_dry->setPointSize(5);
+
+$val4_fold = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'SUHU AREA'!$C$44:$C$53", null, 10);
+$val4_fold->setLineWidth(2.25);
+$val4_fold->setLineColorProperties('F97316'); // Oranye
+$val4_fold->setPointMarker('diamond');
+$val4_fold->setPointSize(5);
+
+$val4_limit = new DataSeriesValues(DataSeriesValues::DATASERIES_TYPE_NUMBER, "'Chart Data Source'!$G$2:$G$11", null, 10);
+$val4_limit->setLineWidth(2.0);
+$val4_limit->setLineColorProperties('DC2626'); // Merah Batas 60%
+$val4_limit->setLineStyleProperty('dash', 'dash');
+
+$valChart4 = [$val4_dry, $val4_fold, $val4_limit];
 
 $seriesChart4 = new DataSeries(
     DataSeries::TYPE_LINECHART,
