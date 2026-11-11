@@ -4,11 +4,10 @@ If you would like to contribute, here are some notes and guidelines:
 
  - All new development should be on feature/fix branches, which are then merged to the `master` branch once stable and approved; so the `master` branch is always the most up-to-date, working code
  - If you are going to submit a pull request, please fork from `master`, and submit your pull request back as a fix/feature branch referencing the GitHub issue number
- - Install (development) dependencies by running `composer install` inside your PhpSpreadsheet clone.
- - The code must work with all PHP versions that we support.
+ - The code must work with all PHP versions that we support (currently PHP 7.4 to PHP 8.2).
    - You can call `composer versions` to test version compatibility. 
  - Code style should be maintained.
-   - `composer style` will identify any issues with Coding Style.
+   - `composer style` will identify any issues with Coding Style`.
    - `composer fix` will fix most issues with Coding Style.
  - All code changes must be validated by `composer check`.
  - Please include Unit Tests to verify that a bug exists, and that this PR fixes it.
@@ -34,17 +33,13 @@ This makes it easier to see exactly what is being tested when reviewing the PR. 
 
 ## How to release
 
-1. On the master branch only, run `composer sbom`, and, if needed, update release numbers on SECURITY.md.
-2. Complete CHANGELOG.md and commit
-3. Create an annotated tag
+1. Complete CHANGELOG.md and commit
+2. Create an annotated tag
     1. `git tag -a 1.2.3`
     2. Tag subject must be the version number, eg: `1.2.3`
     3. Tag body must be a copy-paste of the changelog entries.
-4. Push the tag with `git push --tags`, GitHub Actions will create a GitHub release automatically, and the release details will automatically be sent to packagist.
-5. By default, Github removes markdown headings in the Release Notes. You can either edit to restore these, or, probably preferably, change the default comment character on your system - `git config core.commentChar ";"`.
+3. Push the tag with `git push --tags`, GitHub Actions will create a GitHub release automatically, and the release details will automatically be sent to packagist.
+4. Github seems to remove markdown headings in the Release Notes, so you should edit to restore these.
 
-> **Note:** Tagged releases are made from the `master` branch. Only in an emergency should a tagged release be made from the `release` branch. (i.e. cherry-picked hot-fixes.) However, there are 4 branches which have been updated to apply security patches, and those may be tagged if future security updates are needed.
-- 1.30.x (no further updates including security patches)
-- 2.1.x (no further updates including security patches)
-- 2.4.x (no further updates including security patches)
-- 3.10.x (no further updates except security patches for a very limited time)
+> **Note:** Tagged releases are made from the `master` branch. Only in an emergency should a tagged release be made from the `release` branch. (i.e. cherry-picked hot-fixes.)
+

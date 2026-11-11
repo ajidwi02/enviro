@@ -2,7 +2,6 @@
 
 namespace PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-use Composer\Pcre\Preg;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx\Namespaces;
 use PhpOffice\PhpSpreadsheet\Shared\Drawing as SharedDrawing;
@@ -21,13 +20,8 @@ class Drawing extends WriterPart
      *
      * @return string XML Output
      */
-    public function writeDrawings(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $worksheet, bool $includeCharts = false): string
+    public function writeDrawings(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $worksheet, $includeCharts = false)
     {
-        // Try to use pass-through drawing XML if available
-        if ($passThroughXml = $this->getPassThroughDrawingXml($worksheet)) {
-            return $passThroughXml;
-        }
-
         // Create XML writer
         $objWriter = null;
         if ($this->getParentWriter()->getUseDiskCaching()) {
@@ -60,13 +54,19 @@ class Drawing extends WriterPart
         }
 
         if ($includeCharts) {
-            foreach ($worksheet->getChartCollection() as $c => $chart) {
-                $this->writeChart($objWriter, $chart, $c + $i);
+            $chartCount = $worksheet->getChartCount();
+            // Loop through charts and write the chart position
+            if ($chartCount > 0) {
+                for ($c = 0; $c < $chartCount; ++$c) {
+                    $chart = $worksheet->getChartByIndex((string) $c);
+                    if ($chart !== false) {
+                        $this->writeChart($objWriter, $chart, $c + $i);
+                    }
+                }
             }
         }
 
         // unparsed AlternateContent
-        /** @var string[][][][] */
         $unparsedLoadedData = $worksheet->getParentOrThrow()->getUnparsedLoadedData();
         if (isset($unparsedLoadedData['sheets'][$worksheet->getCodeName()]['drawingAlternateContents'])) {
             foreach ($unparsedLoadedData['sheets'][$worksheet->getCodeName()]['drawingAlternateContents'] as $drawingAlternateContent) {
@@ -82,8 +82,10 @@ class Drawing extends WriterPart
 
     /**
      * Write drawings to XML format.
+     *
+     * @param int $relationId
      */
-    public function writeChart(XMLWriter $objWriter, \PhpOffice\PhpSpreadsheet\Chart\Chart $chart, int $relationId = -1): void
+    public function writeChart(XMLWriter $objWriter, \PhpOffice\PhpSpreadsheet\Chart\Chart $chart, $relationId = -1): void
     {
         $tl = $chart->getTopLeftPosition();
         $tlColRow = Coordinate::indexesFromString($tl['cell']);
@@ -136,11 +138,8 @@ class Drawing extends WriterPart
         $objWriter->writeAttribute('macro', '');
         $objWriter->startElement('xdr:nvGraphicFramePr');
         $objWriter->startElement('xdr:cNvPr');
-        $objWriter->writeAttribute('name', $chart->getName() === '' ? 'Chart ' . $relationId : $chart->getName());
+        $objWriter->writeAttribute('name', 'Chart ' . $relationId);
         $objWriter->writeAttribute('id', (string) (1025 * $relationId));
-        if ($chart->getDescription() !== '') {
-            $objWriter->writeAttribute('descr', $chart->getDescription());
-        }
         $objWriter->endElement();
         $objWriter->startElement('xdr:cNvGraphicFramePr');
         $objWriter->startElement('a:graphicFrameLocks');
@@ -161,17 +160,9 @@ class Drawing extends WriterPart
 
         $objWriter->startElement('a:graphic');
         $objWriter->startElement('a:graphicData');
-
-        if ($chart->getChartEx() === null) {
-            $objWriter->writeAttribute('uri', Namespaces::CHART);
-            $objWriter->startElement('c:chart');
-            $objWriter->writeAttribute('xmlns:c', Namespaces::CHART);
-        } else {
-            $objWriter->writeAttribute('uri', Namespaces::CHART_EX);
-            $objWriter->startElement('cx:chart');
-            $objWriter->writeAttribute('xmlns:cx', Namespaces::CHART_EX);
-        }
-
+        $objWriter->writeAttribute('uri', Namespaces::CHART);
+        $objWriter->startElement('c:chart');
+        $objWriter->writeAttribute('xmlns:c', Namespaces::CHART);
         $objWriter->writeAttribute('xmlns:r', Namespaces::SCHEMA_OFFICE_DOCUMENT);
         $objWriter->writeAttribute('r:id', 'rId' . $relationId);
         $objWriter->endElement();
@@ -187,8 +178,11 @@ class Drawing extends WriterPart
 
     /**
      * Write drawings to XML format.
+     *
+     * @param int $relationId
+     * @param null|int $hlinkClickId
      */
-    public function writeDrawing(XMLWriter $objWriter, BaseDrawing $drawing, int $relationId = -1, ?int $hlinkClickId = null): void
+    public function writeDrawing(XMLWriter $objWriter, BaseDrawing $drawing, $relationId = -1, $hlinkClickId = null): void
     {
         if ($relationId >= 0) {
             $isTwoCellAnchor = $drawing->getCoordinates2() !== '';
@@ -253,19 +247,6 @@ class Drawing extends WriterPart
             //a:hlinkClick
             $this->writeHyperLinkDrawing($objWriter, $hlinkClickId);
 
-            // The form of Excel and LibreOffice
-            if ($drawing->isDecorative()) {
-                $objWriter->startElement('a:extLst');
-                $objWriter->startElement('a:ext');
-                $objWriter->writeAttribute('uri', '{C183D7F6-B498-43B3-948B-1728B52AA6E4}');
-                $objWriter->startElement('adec:decorative');
-                $objWriter->writeAttribute('xmlns:adec', 'http://schemas.microsoft.com/office/drawing/2017/decorative');
-                $objWriter->writeAttribute('val', '1');
-                $objWriter->endElement();
-                $objWriter->endElement();
-                $objWriter->endElement();
-            }
-
             $objWriter->endElement();
 
             // xdr:cNvPicPr
@@ -287,29 +268,12 @@ class Drawing extends WriterPart
             $objWriter->startElement('a:blip');
             $objWriter->writeAttribute('xmlns:r', Namespaces::SCHEMA_OFFICE_DOCUMENT);
             $objWriter->writeAttribute('r:embed', 'rId' . $relationId);
-            $temp = $drawing->getOpacity();
-            if (is_int($temp) && $temp >= 0 && $temp <= 100000) {
-                $objWriter->startElement('a:alphaModFix');
-                $objWriter->writeAttribute('amt', "$temp");
-                $objWriter->endElement(); // a:alphaModFix
-            }
-            $objWriter->endElement(); // a:blip
+            $objWriter->endElement();
 
-            $srcRect = $drawing->getSrcRect();
-            if (!empty($srcRect)) {
-                $objWriter->startElement('a:srcRect');
-                foreach ($srcRect as $key => $value) {
-                    $objWriter->writeAttribute($key, (string) $value);
-                }
-                $objWriter->endElement(); // a:srcRect
-                $objWriter->startElement('a:stretch');
-                $objWriter->endElement(); // a:stretch
-            } else {
-                // a:stretch
-                $objWriter->startElement('a:stretch');
-                $objWriter->writeElement('a:fillRect', null);
-                $objWriter->endElement();
-            }
+            // a:stretch
+            $objWriter->startElement('a:stretch');
+            $objWriter->writeElement('a:fillRect', null);
+            $objWriter->endElement();
 
             $objWriter->endElement();
 
@@ -319,8 +283,6 @@ class Drawing extends WriterPart
             // a:xfrm
             $objWriter->startElement('a:xfrm');
             $objWriter->writeAttribute('rot', (string) SharedDrawing::degreesToAngle($drawing->getRotation()));
-            self::writeAttributeIf($objWriter, $drawing->getFlipVertical(), 'flipV', '1');
-            self::writeAttributeIf($objWriter, $drawing->getFlipHorizontal(), 'flipH', '1');
             if ($isTwoCellAnchor) {
                 $objWriter->startElement('a:ext');
                 $objWriter->writeAttribute('cx', self::stringEmu($drawing->getWidth()));
@@ -383,7 +345,7 @@ class Drawing extends WriterPart
      *
      * @return string XML Output
      */
-    public function writeVMLHeaderFooterImages(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $worksheet): string
+    public function writeVMLHeaderFooterImages(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $worksheet)
     {
         // Create XML writer
         $objWriter = null;
@@ -528,14 +490,10 @@ class Drawing extends WriterPart
      *
      * @param string $reference Reference
      */
-    private function writeVMLHeaderFooterImage(XMLWriter $objWriter, string $reference, HeaderFooterDrawing $image): void
+    private function writeVMLHeaderFooterImage(XMLWriter $objWriter, $reference, HeaderFooterDrawing $image): void
     {
         // Calculate object id
-        if (!Preg::isMatch('{(\d+)}', md5($reference), $m)) {
-            // @codeCoverageIgnoreStart
-            throw new WriterException('Regexp failure in writeVMLHeaderFooterImage');
-            // @codeCoverageIgnoreEnd
-        }
+        preg_match('{(\d+)}', md5($reference), $m);
         $id = 1500 + ((int) substr($m[1], 0, 2) * 1);
 
         // Calculate offset
@@ -550,10 +508,6 @@ class Drawing extends WriterPart
         $objWriter->writeAttribute('o:spid', '_x0000_s' . $id);
         $objWriter->writeAttribute('type', '#_x0000_t75');
         $objWriter->writeAttribute('style', "position:absolute;margin-left:{$marginLeft}px;margin-top:{$marginTop}px;width:{$width}px;height:{$height}px;z-index:1");
-        // The alternative text, as Excel writes it; o:title below is the name
-        if ($image->getDescription() !== '') {
-            $objWriter->writeAttribute('alt', $image->getDescription());
-        }
 
         // v:imagedata
         $objWriter->startElement('v:imagedata');
@@ -575,7 +529,7 @@ class Drawing extends WriterPart
      *
      * @return BaseDrawing[] All drawings in PhpSpreadsheet
      */
-    public function allDrawings(Spreadsheet $spreadsheet): array
+    public function allDrawings(Spreadsheet $spreadsheet)
     {
         // Get an array of all drawings
         $aDrawings = [];
@@ -590,18 +544,15 @@ class Drawing extends WriterPart
 
                 $iterator->next();
             }
-            $iterator = $spreadsheet->getSheet($i)->getInCellDrawingCollection()->getIterator();
-            while ($iterator->valid()) {
-                $aDrawings[] = $iterator->current();
-
-                $iterator->next();
-            }
         }
 
         return $aDrawings;
     }
 
-    private function writeHyperLinkDrawing(XMLWriter $objWriter, ?int $hlinkClickId): void
+    /**
+     * @param null|int $hlinkClickId
+     */
+    private function writeHyperLinkDrawing(XMLWriter $objWriter, $hlinkClickId): void
     {
         if ($hlinkClickId === null) {
             return;
@@ -616,35 +567,5 @@ class Drawing extends WriterPart
     private static function stringEmu(int $pixelValue): string
     {
         return (string) SharedDrawing::pixelsToEMU($pixelValue);
-    }
-
-    private static function writeAttributeIf(XMLWriter $objWriter, ?bool $condition, string $attr, string $val): void
-    {
-        if ($condition) {
-            $objWriter->writeAttribute($attr, $val);
-        }
-    }
-
-    /**
-     * Get pass-through drawing XML if available.
-     *
-     * Returns the original drawing XML stored during load (when Reader pass-through was enabled).
-     * This preserves unsupported drawing elements (shapes, textboxes) that PhpSpreadsheet cannot parse.
-     *
-     * @return ?string The pass-through XML, or null if not available or should not be used
-     */
-    private function getPassThroughDrawingXml(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $worksheet): ?string
-    {
-        /** @var array<string, array<string, mixed>> $sheets */
-        $sheets = $worksheet->getParentOrThrow()->getUnparsedLoadedData()['sheets'] ?? [];
-        $sheetData = $sheets[$worksheet->getCodeName()] ?? [];
-        // Only use pass-through XML if the Reader flag was explicitly enabled
-        /** @var string[] $drawings */
-        $drawings = $sheetData['Drawings'] ?? [];
-        if (($sheetData['drawingPassThroughEnabled'] ?? false) !== true || $drawings === []) {
-            return null;
-        }
-
-        return reset($drawings) ?: null;
     }
 }

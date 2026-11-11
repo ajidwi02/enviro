@@ -55,9 +55,6 @@ class Meta extends WriterPart
         $objWriter->writeElement('dc:description', $spreadsheet->getProperties()->getDescription());
         $objWriter->writeElement('dc:subject', $spreadsheet->getProperties()->getSubject());
         $objWriter->writeElement('meta:keyword', $spreadsheet->getProperties()->getKeywords());
-        if ($spreadsheet->getProperties()->getLanguage() !== '') {
-            $objWriter->writeElement('dc:language', $spreadsheet->getProperties()->getLanguage());
-        }
         // Don't know if this changed over time, but the keywords are all
         //  in a single declaration now.
         //$keywords = explode(' ', $spreadsheet->getProperties()->getKeywords());
@@ -68,12 +65,12 @@ class Meta extends WriterPart
         //<meta:document-statistic meta:table-count="XXX" meta:cell-count="XXX" meta:object-count="XXX"/>
         $objWriter->startElement('meta:user-defined');
         $objWriter->writeAttribute('meta:name', 'Company');
-        $objWriter->writeRawData($spreadsheet->getProperties()->getCompany());
+        $objWriter->writeRaw($spreadsheet->getProperties()->getCompany());
         $objWriter->endElement();
 
         $objWriter->startElement('meta:user-defined');
         $objWriter->writeAttribute('meta:name', 'category');
-        $objWriter->writeRawData($spreadsheet->getProperties()->getCategory());
+        $objWriter->writeRaw($spreadsheet->getProperties()->getCategory());
         $objWriter->endElement();
 
         self::writeDocPropsCustom($objWriter, $spreadsheet);
@@ -88,7 +85,7 @@ class Meta extends WriterPart
     private static function writeDocPropsCustom(XMLWriter $objWriter, Spreadsheet $spreadsheet): void
     {
         $customPropertyList = $spreadsheet->getProperties()->getCustomProperties();
-        foreach ($customPropertyList as $customProperty) {
+        foreach ($customPropertyList as $key => $customProperty) {
             $propertyValue = $spreadsheet->getProperties()->getCustomPropertyValue($customProperty);
             $propertyType = $spreadsheet->getProperties()->getCustomPropertyType($customProperty);
 
@@ -99,7 +96,7 @@ class Meta extends WriterPart
                 case Properties::PROPERTY_TYPE_INTEGER:
                 case Properties::PROPERTY_TYPE_FLOAT:
                     $objWriter->writeAttribute('meta:value-type', 'float');
-                    $objWriter->writeRawData((string) $propertyValue);
+                    $objWriter->writeRawData($propertyValue);
 
                     break;
                 case Properties::PROPERTY_TYPE_BOOLEAN:
@@ -109,12 +106,12 @@ class Meta extends WriterPart
                     break;
                 case Properties::PROPERTY_TYPE_DATE:
                     $objWriter->writeAttribute('meta:value-type', 'date');
-                    $dtobj = Date::dateTimeFromTimestamp((string) ($propertyValue ?? 0));
+                    $dtobj = Date::dateTimeFromTimestamp($propertyValue ?? 0);
                     $objWriter->writeRawData($dtobj->format(DATE_W3C));
 
                     break;
                 default:
-                    $objWriter->writeRawData((string) $propertyValue);
+                    $objWriter->writeRawData($propertyValue);
 
                     break;
             }

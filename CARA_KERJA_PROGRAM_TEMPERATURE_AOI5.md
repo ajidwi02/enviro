@@ -310,7 +310,7 @@ enviro/
 ├── config_temp_humid.php               # Konfigurasi koneksi MySQL database 'enviro'
 ├── index.php                           # Halaman portal utama sistem Enviro & background client sync
 ├── migration_weather_aoi5.sql          # Skrip DDL pembentukan tabel database weather_aoi5
-└── vendor/                             # Pustaka Composer lokal (PhpSpreadsheet, zipstream, etc.) siap upload via FileZilla
+└── vendor/                             # Pustaka Composer lokal LTS PHP 7.4 (PhpSpreadsheet 1.30, zipstream 2.2, etc.) siap upload via FileZilla
 ```
 
 ---

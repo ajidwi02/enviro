@@ -58,15 +58,15 @@ class ChainedBlockStream
 
         // 25 is length of "ole-chainedblockstream://"
         parse_str(substr($path, 25), $this->params);
-        if (!isset($this->params['oleInstanceId'], $this->params['blockId'], $GLOBALS['_OLE_INSTANCES'][$this->params['oleInstanceId']])) { //* @phpstan-ignore offsetAccess.nonOffsetAccessible (I don't know how to fix this)
+        if (!isset($this->params['oleInstanceId'], $this->params['blockId'], $GLOBALS['_OLE_INSTANCES'][$this->params['oleInstanceId']])) {
             if ($options & STREAM_REPORT_ERRORS) {
                 trigger_error('OLE stream not found', E_USER_WARNING);
             }
 
             return false;
         }
-        $this->ole = $GLOBALS['_OLE_INSTANCES'][$this->params['oleInstanceId']]; //* @phpstan-ignore assign.propertyType (I don't know how to fix this)
-        if (!($this->ole instanceof OLE)) { //* @phpstan-ignore instanceof.alwaysTrue (I don't know how to fix this)
+        $this->ole = $GLOBALS['_OLE_INSTANCES'][$this->params['oleInstanceId']];
+        if (!($this->ole instanceof OLE)) {
             throw new Exception('class is not OLE');
         }
 
@@ -154,7 +154,7 @@ class ChainedBlockStream
      *
      * @return false|string
      */
-    public function stream_read(int $count): bool|string // @codingStandardsIgnoreLine
+    public function stream_read(int $count) // @codingStandardsIgnoreLine
     {
         if ($this->stream_eof()) {
             return false;

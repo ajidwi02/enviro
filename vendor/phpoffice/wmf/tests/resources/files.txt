@@ -1,8 +1,0 @@
-# Where to find EMF/WMF files 
-
-## EMF
-https://opengrok.libreoffice.org/xref/core/emfio/qa/cppunit/wmf/data/
-
-## WMF 
-https://opengrok.libreoffice.org/xref/core/emfio/qa/cppunit/wmf/data/
-https://opengrok.libreoffice.org/xref/core/odk/examples/basic/forms_and_controls/

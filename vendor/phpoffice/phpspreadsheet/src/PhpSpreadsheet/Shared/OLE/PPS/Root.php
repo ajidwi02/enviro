@@ -109,7 +109,7 @@ class Root extends PPS
     private function calcSize(array &$raList): array
     {
         // Calculate Basic Setting
-        $iBBcnt = 0;
+        [$iSBDcnt, $iBBcnt, $iPPScnt] = [0, 0, 0];
         $iSBcnt = 0;
         $iCount = count($raList);
         for ($i = 0; $i < $iCount; ++$i) {
@@ -138,14 +138,14 @@ class Root extends PPS
         return [$iSBDcnt, $iBBcnt, $iPPScnt];
     }
 
-    private function assertVersion3StreamSize(int $size): void
+    public function assertVersion3StreamSize(int $size): void
     {
         if ($size > self::MAX_VERSION_3_STREAM_SIZE) {
             throw new Exception('OLE version-3 streams cannot exceed 2 GiB.');
         }
     }
 
-    private function assertVersion3MiniStreamSize(int $smallBlockCount): void
+    public function assertVersion3MiniStreamSize(int $smallBlockCount): void
     {
         $this->assertVersion3StreamSize($smallBlockCount * self::SMALL_BLOCK_SIZE);
     }

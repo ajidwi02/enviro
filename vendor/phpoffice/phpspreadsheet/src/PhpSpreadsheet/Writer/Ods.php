@@ -18,22 +18,45 @@ class Ods extends BaseWriter
 {
     /**
      * Private PhpSpreadsheet.
+     *
+     * @var Spreadsheet
      */
-    private Spreadsheet $spreadSheet;
+    private $spreadSheet;
 
-    private Content $writerPartContent;
+    /**
+     * @var Content
+     */
+    private $writerPartContent;
 
-    private Meta $writerPartMeta;
+    /**
+     * @var Meta
+     */
+    private $writerPartMeta;
 
-    private MetaInf $writerPartMetaInf;
+    /**
+     * @var MetaInf
+     */
+    private $writerPartMetaInf;
 
-    private Mimetype $writerPartMimetype;
+    /**
+     * @var Mimetype
+     */
+    private $writerPartMimetype;
 
-    private Settings $writerPartSettings;
+    /**
+     * @var Settings
+     */
+    private $writerPartSettings;
 
-    private Styles $writerPartStyles;
+    /**
+     * @var Styles
+     */
+    private $writerPartStyles;
 
-    private Thumbnails $writerPartThumbnails;
+    /**
+     * @var Thumbnails
+     */
+    private $writerPartThumbnails;
 
     /**
      * Create a new Ods.
@@ -86,12 +109,6 @@ class Ods extends BaseWriter
         return $this->writerPartThumbnails;
     }
 
-    /** @param array<string, callable> $additionalNumberFormats */
-    public function useAdditionalNumberFormats(array $additionalNumberFormats): void
-    {
-        $this->writerPartContent->additionalNumberFormats = $additionalNumberFormats;
-    }
-
     /**
      * Save PhpSpreadsheet to file.
      *
@@ -106,18 +123,6 @@ class Ods extends BaseWriter
 
         $this->openFileHandle($filename);
 
-        // Collect all drawings from all worksheets
-        $drawingWriter = $this->getWriterPartContent()->getDrawingWriter();
-        $drawingWriter->reset(); // Reset state
-        $sheetCount = $this->spreadSheet->getSheetCount();
-        for ($i = 0; $i < $sheetCount; ++$i) {
-            $sheet = $this->spreadSheet->getSheet($i);
-            $drawingWriter->collectDrawings($sheet);
-        }
-        $drawings = $drawingWriter->getAllImageFiles();
-        // Pass image files to MetaInf writer
-        $this->getWriterPartMetaInf()->setImageFiles($drawings);
-
         $zip = $this->createZip();
 
         $zip->addFile('META-INF/manifest.xml', $this->getWriterPartMetaInf()->write());
@@ -128,14 +133,11 @@ class Ods extends BaseWriter
         $zip->addFile('meta.xml', $this->getWriterPartmeta()->write());
         $zip->addFile('mimetype', $this->getWriterPartmimetype()->write());
         $zip->addFile('styles.xml', $this->getWriterPartstyles()->write());
-        foreach ($drawings as $imagePath => $imageContent) {
-            $zip->addFile($imagePath, $imageContent);
-        }
 
         // Close file
         try {
             $zip->finish();
-        } catch (OverflowException) {
+        } catch (OverflowException $e) {
             throw new WriterException('Could not close resource.');
         }
 
@@ -144,8 +146,10 @@ class Ods extends BaseWriter
 
     /**
      * Create zip object.
+     *
+     * @return ZipStream
      */
-    private function createZip(): ZipStream
+    private function createZip()
     {
         // Try opening the ZIP file
         if (!is_resource($this->fileHandle)) {
@@ -158,8 +162,10 @@ class Ods extends BaseWriter
 
     /**
      * Get Spreadsheet object.
+     *
+     * @return Spreadsheet
      */
-    public function getSpreadsheet(): Spreadsheet
+    public function getSpreadsheet()
     {
         return $this->spreadSheet;
     }
@@ -171,7 +177,7 @@ class Ods extends BaseWriter
      *
      * @return $this
      */
-    public function setSpreadsheet(Spreadsheet $spreadsheet): static
+    public function setSpreadsheet(Spreadsheet $spreadsheet)
     {
         $this->spreadSheet = $spreadsheet;
 

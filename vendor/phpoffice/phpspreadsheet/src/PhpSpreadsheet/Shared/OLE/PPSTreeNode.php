@@ -9,13 +9,21 @@ namespace PhpOffice\PhpSpreadsheet\Shared\OLE;
  */
 final class PPSTreeNode
 {
-    public ?self $left = null;
+    /** @var ?self */
+    public $left;
 
-    public ?self $right = null;
+    /** @var ?self */
+    public $right;
 
-    public int $color = 0;
+    /** @var int */
+    public $color = 0;
 
-    public function __construct(public PPS $pps)
+    /** @var PPS */
+    public $pps;
+
+    /** @param PPS $pps */
+    public function __construct($pps)
     {
+        $this->pps = $pps;
     }
 }

@@ -73,13 +73,17 @@ class PPS
 
     /**
      * A timestamp.
+     *
+     * @var float|int
      */
-    public float|int $Time1st;
+    public $Time1st;
 
     /**
      * A timestamp.
+     *
+     * @var float|int
      */
-    public float|int $Time2nd;
+    public $Time2nd;
 
     /**
      * Starting block (small or big) for this PPS's data  inside the container.
@@ -190,10 +194,11 @@ class PPS
      *
      * @param self[] $raList Reference to the array of PPS's for the whole OLE
      *                          container
+     * @param mixed $to_save
      *
      * @return int The index for this PPS
      */
-    public static function savePpsSetPnt(array &$raList, mixed $to_save, int $depth = 0): int
+    public static function savePpsSetPnt(array &$raList, $to_save, int $depth = 0): int
     {
         if (!is_array($to_save) || (empty($to_save))) {
             return self::ALL_ONE_BITS;

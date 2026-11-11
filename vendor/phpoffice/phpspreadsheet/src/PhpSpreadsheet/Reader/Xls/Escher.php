@@ -12,9 +12,6 @@ use PhpOffice\PhpSpreadsheet\Shared\Escher\DggContainer\BstoreContainer;
 use PhpOffice\PhpSpreadsheet\Shared\Escher\DggContainer\BstoreContainer\BSE;
 use PhpOffice\PhpSpreadsheet\Shared\Escher\DggContainer\BstoreContainer\BSE\Blip;
 
-/**
- * @template T of BSE|BstoreContainer|DgContainer|DggContainer|\PhpOffice\PhpSpreadsheet\Shared\Escher|SpContainer|SpgrContainer
- */
 class Escher
 {
     const DGGCONTAINER = 0xF000;
@@ -31,8 +28,6 @@ class Escher
     const CLIENTTEXTBOX = 0xF00D;
     const CLIENTANCHOR = 0xF010;
     const CLIENTDATA = 0xF011;
-    const BLIPEMF = 0xF01A;
-    const BLIPWMF = 0xF01B;
     const BLIPJPEG = 0xF01D;
     const BLIPPNG = 0xF01E;
     const SPLITMENUCOLORS = 0xF11E;
@@ -40,32 +35,38 @@ class Escher
 
     /**
      * Escher stream data (binary).
+     *
+     * @var string
      */
-    private string $data;
+    private $data;
 
     /**
      * Size in bytes of the Escher stream data.
+     *
+     * @var int
      */
-    private int $dataSize;
+    private $dataSize;
 
     /**
      * Current position of stream pointer in Escher stream data.
+     *
+     * @var int
      */
-    private int $pos;
+    private $pos;
 
     /**
      * The object to be returned by the reader. Modified during load.
      *
-     * @var T
+     * @var BSE|BstoreContainer|DgContainer|DggContainer|\PhpOffice\PhpSpreadsheet\Shared\Escher|SpContainer|SpgrContainer
      */
-    private BSE|BstoreContainer|DgContainer|DggContainer|\PhpOffice\PhpSpreadsheet\Shared\Escher|SpContainer|SpgrContainer $object;
+    private $object;
 
     /**
      * Create a new Escher instance.
      *
-     * @param T $object
+     * @param mixed $object
      */
-    public function __construct(BSE|BstoreContainer|DgContainer|DggContainer|\PhpOffice\PhpSpreadsheet\Shared\Escher|SpContainer|SpgrContainer $object)
+    public function __construct($object)
     {
         $this->object = $object;
     }
@@ -75,8 +76,6 @@ class Escher
         self::DGG => 'readDgg',
         self::BSTORECONTAINER => 'readBstoreContainer',
         self::BSE => 'readBSE',
-        self::BLIPEMF => 'readBlipMetafile',
-        self::BLIPWMF => 'readBlipMetafile',
         self::BLIPJPEG => 'readBlipJPEG',
         self::BLIPPNG => 'readBlipPNG',
         self::OPT => 'readOPT',
@@ -96,9 +95,11 @@ class Escher
     /**
      * Load Escher stream data. May be a partial Escher stream.
      *
-     * @return T
+     * @param string $data
+     *
+     * @return BSE|BstoreContainer|DgContainer|DggContainer|\PhpOffice\PhpSpreadsheet\Shared\Escher|SpContainer|SpgrContainer
      */
-    public function load(string $data): BSE|BstoreContainer|DgContainer|DggContainer|\PhpOffice\PhpSpreadsheet\Shared\Escher|SpContainer|SpgrContainer
+    public function load($data)
     {
         $this->data = $data;
 
@@ -338,58 +339,6 @@ class Escher
     }
 
     /**
-     * Read BlipEMF or BlipWMF record. Holds a (possibly compressed) Windows Metafile.
-     */
-    private function readBlipMetafile(): void
-    {
-        // offset: 0; size: 2; recVer and recInstance
-
-        // bit: 4-15; mask: 0xFFF0; recInstance
-        $recInstance = (0xFFF0 & Xls::getUInt2d($this->data, $this->pos)) >> 4;
-
-        $length = Xls::getInt4d($this->data, $this->pos + 4);
-        $recordData = substr($this->data, $this->pos + 8, $length);
-
-        // move stream pointer to next record
-        $this->pos += 8 + $length;
-
-        $pos = 0;
-
-        // offset: 0; size: 16; rgbUid1 (MD4 digest of)
-        $pos += 16;
-
-        // offset: 16; size: 16; rgbUid2 (MD4 digest), only if $recInstance = 0x3D5 (EMF) or 0x217 (WMF)
-        if (in_array($recInstance, [0x03D5, 0x0217], true)) {
-            $pos += 16;
-        }
-
-        // offset: var; size: 34; metafileHeader
-        // size: 4; cbSize, uncompressed size of the metafile
-        // size: 16; rcBounds
-        // size: 8; ptSize
-        // size: 4; cbSave, size of the metafile data
-        $cbSave = Xls::getInt4d($recordData, $pos + 28);
-        // size: 1; compression (0x00: DEFLATE, 0xFE: none)
-        $compression = ord($recordData[$pos + 32] ?? "\xFE");
-        // size: 1; filter
-        $pos += 34;
-
-        // offset: var; size: var; the metafile data
-        $data = substr($recordData, $pos, $cbSave);
-        if ($compression === 0x00) {
-            $data = @gzuncompress($data);
-            if ($data === false) {
-                return;
-            }
-        }
-
-        $blip = new Blip();
-        $blip->setData($data);
-
-        $this->applyAttribute('setBlip', $blip);
-    }
-
-    /**
      * Read OPT record. This record may occur within DggContainer record or SpContainer.
      */
     private function readOPT(): void
@@ -604,7 +553,10 @@ class Escher
         $this->applyAttribute('setEndOffsetY', $endOffsetY);
     }
 
-    private function applyAttribute(string $name, mixed $value): void
+    /**
+     * @param mixed $value
+     */
+    private function applyAttribute(string $name, $value): void
     {
         if (method_exists($this->object, $name)) {
             $this->object->$name($value);
@@ -629,7 +581,7 @@ class Escher
      * @param string $data Binary data
      * @param int $n Number of properties
      */
-    private function readOfficeArtRGFOPTE(string $data, int $n): void
+    private function readOfficeArtRGFOPTE($data, $n): void
     {
         $splicedComplexData = substr($data, 6 * $n);
 

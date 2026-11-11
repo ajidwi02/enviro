@@ -2,15 +2,13 @@
 
 namespace PhpOffice\PhpSpreadsheet\Writer\Ods;
 
-use Composer\Pcre\Preg;
 use PhpOffice\PhpSpreadsheet\Calculation\Calculation;
 use PhpOffice\PhpSpreadsheet\DefinedName;
-use PhpOffice\PhpSpreadsheet\Shared\StringHelper;
 
 class Formula
 {
-    /** @var string[] */
-    private array $definedNames = [];
+    /** @var array */
+    private $definedNames = [];
 
     /**
      * @param DefinedName[] $definedNames
@@ -24,57 +22,26 @@ class Formula
 
     public function convertFormula(string $formula, string $worksheetName = ''): string
     {
-        // Convert only outside of string literals, so that the text in
-        // ="THIS IS E1" is left alone rather than treated as a cell reference.
-        $converted = '';
-        foreach ($this->splitOnStringLiterals($formula) as $index => $part) {
-            if (1 === $index % 2) { // the captured string literal
-                $converted .= $part;
+        $formula = $this->convertCellReferences($formula, $worksheetName);
+        $formula = $this->convertDefinedNames($formula);
 
-                continue;
-            }
-
-            $part = $this->convertCellReferences($part, $worksheetName);
-            $part = $this->convertDefinedNames($part);
-            $converted .= $this->convertFunctionNames($part);
-        }
-        $formula = $converted;
-
-        if (!str_starts_with($formula, '=')) {
+        if (substr($formula, 0, 1) !== '=') {
             $formula = '=' . $formula;
         }
 
         return 'of:' . $formula;
     }
 
-    /**
-     * Splits a formula into alternating segments outside and inside string literals,
-     * with the literals themselves at the odd offsets.
-     *
-     * A range such as A1:B2 can never be interrupted by a string literal, so every
-     * reference stays within a single segment and keeps its surrounding context.
-     *
-     * @return string[]
-     */
-    private function splitOnStringLiterals(string $formula): array
-    {
-        return Preg::split(
-            '/(' . Calculation::CALCULATION_REGEXP_STRING . ')/ui',
-            $formula,
-            -1,
-            PREG_SPLIT_DELIM_CAPTURE
-        );
-    }
-
     private function convertDefinedNames(string $formula): string
     {
-        $splitCount = Preg::matchAllWithOffsets(
+        $splitCount = preg_match_all(
             '/' . Calculation::CALCULATION_REGEXP_DEFINEDNAME . '/mui',
             $formula,
-            $splitRanges
+            $splitRanges,
+            PREG_OFFSET_CAPTURE
         );
 
-        $lengths = array_map([StringHelper::class, 'strlenAllowNull'], array_column($splitRanges[0], 0));
+        $lengths = array_map('strlen', array_column($splitRanges[0], 0));
         $offsets = array_column($splitRanges[0], 1);
         $values = array_column($splitRanges[0], 0);
 
@@ -94,22 +61,23 @@ class Formula
 
     private function convertCellReferences(string $formula, string $worksheetName): string
     {
-        $splitCount = Preg::matchAllWithOffsets(
+        $splitCount = preg_match_all(
             '/' . Calculation::CALCULATION_REGEXP_CELLREF_RELATIVE . '/mui',
             $formula,
-            $splitRanges
+            $splitRanges,
+            PREG_OFFSET_CAPTURE
         );
 
-        $lengths = array_map([StringHelper::class, 'strlenAllowNull'], array_column($splitRanges[0], 0));
+        $lengths = array_map('strlen', array_column($splitRanges[0], 0));
         $offsets = array_column($splitRanges[0], 1);
 
         $worksheets = $splitRanges[2];
         $columns = $splitRanges[6];
         $rows = $splitRanges[7];
 
-        // Replace any commas in the formula with semicolons for Ods
+        // Replace any commas in the formula with semi-colons for Ods
         // If by chance there are commas in worksheet names, then they will be "fixed" again in the loop
-        //    because we've already extracted worksheet names with our Preg::matchAllWithOffsets()
+        //    because we've already extracted worksheet names with our preg_match_all()
         $formula = str_replace(',', ';', $formula);
         while ($splitCount > 0) {
             --$splitCount;
@@ -135,9 +103,9 @@ class Formula
             }
             $newRange .= '.';
 
-            //if (!empty($column)) { // phpstan says always true
-            $newRange .= $column;
-            //}
+            if (!empty($column)) {
+                $newRange .= $column;
+            }
             if (!empty($row)) {
                 $newRange .= $row;
             }
@@ -148,23 +116,5 @@ class Formula
         }
 
         return $formula;
-    }
-
-    private function convertFunctionNames(string $formula): string
-    {
-        return Preg::replace(
-            [
-                '/\b((CEILING|FLOOR)'
-                    . '([.](MATH|PRECISE))?)\s*[(]/ui',
-                '/\b(CEILING|FLOOR)[.]XCL\s*[(]/ui',
-                '/\b(CEILING|FLOOR)[.]ODS\s*[(]/ui',
-            ],
-            [
-                'COM.MICROSOFT.$1(',
-                'COM.MICROSOFT.$1(',
-                '$1(',
-            ],
-            $formula
-        );
     }
 }

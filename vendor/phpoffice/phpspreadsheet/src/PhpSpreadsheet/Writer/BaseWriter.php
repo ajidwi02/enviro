@@ -7,97 +7,74 @@ abstract class BaseWriter implements IWriter
     /**
      * Write charts that are defined in the workbook?
      * Identifies whether the Writer should write definitions for any charts that exist in the PhpSpreadsheet object.
+     *
+     * @var bool
      */
-    protected bool $includeCharts = false;
+    protected $includeCharts = false;
 
     /**
      * Pre-calculate formulas
      * Forces PhpSpreadsheet to recalculate all formulae in a workbook when saving, so that the pre-calculated values are
      * immediately available to MS Excel or other office spreadsheet viewer when opening the file.
+     *
+     * @var bool
      */
-    protected bool $preCalculateFormulas = true;
-
-    /**
-     * Write Windows Metafiles (WMF, EMF, EMF+) as PNG images?
-     * Writers whose format can not hold metafiles (Xls, Html, Pdf) always write them as PNG images.
-     */
-    protected bool $convertMetafilesToPng = true;
+    protected $preCalculateFormulas = true;
 
     /**
      * Use disk caching where possible?
+     *
+     * @var bool
      */
-    private bool $useDiskCaching = false;
+    private $useDiskCaching = false;
 
     /**
      * Disk caching directory.
+     *
+     * @var string
      */
-    private string $diskCachingDirectory = './';
+    private $diskCachingDirectory = './';
 
     /**
      * @var resource
      */
     protected $fileHandle;
 
-    private bool $shouldCloseFile;
+    /**
+     * @var bool
+     */
+    private $shouldCloseFile;
 
-    public function getIncludeCharts(): bool
+    public function getIncludeCharts()
     {
         return $this->includeCharts;
     }
 
-    public function setIncludeCharts(bool $includeCharts): self
+    public function setIncludeCharts($includeCharts)
     {
-        $this->includeCharts = $includeCharts;
+        $this->includeCharts = (bool) $includeCharts;
 
         return $this;
     }
 
-    public function getPreCalculateFormulas(): bool
+    public function getPreCalculateFormulas()
     {
         return $this->preCalculateFormulas;
     }
 
-    public function setPreCalculateFormulas(bool $precalculateFormulas): self
+    public function setPreCalculateFormulas($precalculateFormulas)
     {
-        $this->preCalculateFormulas = $precalculateFormulas;
+        $this->preCalculateFormulas = (bool) $precalculateFormulas;
 
         return $this;
     }
 
-    /**
-     * Get whether Windows Metafiles (WMF, EMF, EMF+) are written as PNG images.
-     */
-    public function getConvertMetafilesToPng(): bool
-    {
-        return $this->convertMetafilesToPng;
-    }
-
-    /**
-     * Set whether Windows Metafiles (WMF, EMF, EMF+) are written as PNG images, or stored as is.
-     *
-     * PNG images are displayed the same way by all applications.
-     * Metafiles stored as is keep their vector graphics, but some applications
-     * (like LibreOffice, Excel for Mac, Excel for the web or Google Sheets) do not support all their records.
-     * A metafile which can not be rendered is always stored as is.
-     *
-     * This setting is used by the Xlsx (default: stored as is) and Ods (default: PNG) writers.
-     * Writers whose format can not hold metafiles (Xls, Html, Pdf) always write them as PNG images.
-     *
-     * @return $this
-     */
-    public function setConvertMetafilesToPng(bool $convertMetafilesToPng): static
-    {
-        $this->convertMetafilesToPng = $convertMetafilesToPng;
-
-        return $this;
-    }
-
-    public function getUseDiskCaching(): bool
+    public function getUseDiskCaching()
     {
         return $this->useDiskCaching;
     }
 
-    public function setUseDiskCaching(bool $useDiskCache, ?string $cacheDirectory = null): self
+    public function setUseDiskCaching($useDiskCache, $cacheDirectory = null)
     {
         $this->useDiskCaching = $useDiskCache;
 
@@ -112,7 +89,7 @@ abstract class BaseWriter implements IWriter
         return $this;
     }
 
-    public function getDiskCachingDirectory(): string
+    public function getDiskCachingDirectory()
     {
         return $this->diskCachingDirectory;
     }
@@ -134,7 +111,7 @@ abstract class BaseWriter implements IWriter
      */
     public function openFileHandle($filename): void
     {
-        if (!is_string($filename)) {
+        if (is_resource($filename)) {
             $this->fileHandle = $filename;
             $this->shouldCloseFile = false;
 
@@ -157,18 +134,13 @@ abstract class BaseWriter implements IWriter
         $this->shouldCloseFile = true;
     }
 
-    protected function tryClose(): bool
-    {
-        return fclose($this->fileHandle);
-    }
-
     /**
      * Close file handle only if we opened it ourselves.
      */
     protected function maybeCloseFileHandle(): void
     {
         if ($this->shouldCloseFile) {
-            if (!$this->tryClose()) {
+            if (!fclose($this->fileHandle)) {
                 throw new Exception('Could not close file after writing.');
             }
         }
