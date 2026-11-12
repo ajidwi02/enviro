@@ -90,6 +90,7 @@ if (isset($conn) && $conn) {
 $init_status   = isset($init_weather['weather_status']) ? $init_weather['weather_status'] : 'Cerah';
 $init_temp_out = (isset($init_weather['temp_outdoor']) && $init_weather['temp_outdoor'] !== null) ? $init_weather['temp_outdoor'] : '--';
 $init_hum_out  = (isset($init_weather['humidity_outdoor']) && $init_weather['humidity_outdoor'] !== null) ? $init_weather['humidity_outdoor'] : '--';
+$init_cloud    = (isset($init_weather['cloud_cover']) && $init_weather['cloud_cover'] !== null) ? $init_weather['cloud_cover'] : '--';
 $init_rain     = (isset($init_weather['rainfall']) && $init_weather['rainfall'] !== null) ? $init_weather['rainfall'] : '0.0';
 $init_wind     = (isset($init_weather['wind_speed']) && $init_weather['wind_speed'] !== null) ? $init_weather['wind_speed'] : '0.0';
 $init_time     = isset($init_weather['record_time']) ? $init_weather['record_time'] : '-';
@@ -270,21 +271,25 @@ if ($init_status === 'Hujan') {
                     </div>
                     <div class="col-lg-6 col-md-12 mb-2 mb-lg-0 border-right">
                         <div class="row text-center">
-                            <div class="col-3">
+                            <div class="col px-1">
                                 <span class="small text-muted d-block" style="font-size: 0.70rem;">Suhu Luar</span>
-                                <span class="font-weight-bold text-dark" style="font-size: 1.02rem;"><span id="wtr_temp"><?php echo $init_temp_out; ?></span> °C</span>
+                                <span class="font-weight-bold text-dark" style="font-size: 1.00rem;"><span id="wtr_temp"><?php echo $init_temp_out; ?></span> °C</span>
                             </div>
-                            <div class="col-3 border-left">
-                                <span class="small text-muted d-block" style="font-size: 0.70rem;">Kelembapan Luar</span>
-                                <span class="font-weight-bold text-dark" style="font-size: 1.02rem;"><span id="wtr_humidity"><?php echo $init_hum_out; ?></span> %</span>
+                            <div class="col px-1 border-left">
+                                <span class="small text-muted d-block" style="font-size: 0.70rem;">Kelembapan</span>
+                                <span class="font-weight-bold text-dark" style="font-size: 1.00rem;"><span id="wtr_humidity"><?php echo $init_hum_out; ?></span> %</span>
                             </div>
-                            <div class="col-3 border-left">
+                            <div class="col px-1 border-left">
+                                <span class="small text-muted d-block" style="font-size: 0.70rem;" title="Persentase Tutupan Awan">Tutupan Awan</span>
+                                <span class="font-weight-bold text-dark" style="font-size: 1.00rem;"><span id="wtr_cloud"><?php echo $init_cloud; ?></span> %</span>
+                            </div>
+                            <div class="col px-1 border-left">
                                 <span class="small text-muted d-block" style="font-size: 0.70rem;">Curah Hujan</span>
-                                <span class="font-weight-bold text-dark" style="font-size: 1.02rem;"><span id="wtr_rain"><?php echo $init_rain; ?></span> mm</span>
+                                <span class="font-weight-bold text-dark" style="font-size: 1.00rem;"><span id="wtr_rain"><?php echo $init_rain; ?></span> mm</span>
                             </div>
-                            <div class="col-3 border-left">
+                            <div class="col px-1 border-left">
                                 <span class="small text-muted d-block" style="font-size: 0.70rem;">Angin</span>
-                                <span class="font-weight-bold text-dark" style="font-size: 1.02rem;"><span id="wtr_wind"><?php echo $init_wind; ?></span> km/h</span>
+                                <span class="font-weight-bold text-dark" style="font-size: 1.00rem;"><span id="wtr_wind"><?php echo $init_wind; ?></span> km/h</span>
                             </div>
                         </div>
                     </div>
@@ -781,6 +786,7 @@ if ($init_status === 'Hujan') {
         var statusElem = document.getElementById("wtr_status_badge");
         var tempElem   = document.getElementById("wtr_temp");
         var humElem    = document.getElementById("wtr_humidity");
+        var cloudElem  = document.getElementById("wtr_cloud");
         var rainElem   = document.getElementById("wtr_rain");
         var windElem   = document.getElementById("wtr_wind");
         var updateElem = document.getElementById("wtr_last_update");
@@ -804,6 +810,9 @@ if ($init_status === 'Hujan') {
         }
         if (humElem && data.humidity_outdoor !== null && data.humidity_outdoor !== undefined) {
             humElem.innerText = data.humidity_outdoor;
+        }
+        if (cloudElem && data.cloud_cover !== null && data.cloud_cover !== undefined) {
+            cloudElem.innerText = data.cloud_cover;
         }
         if (rainElem && data.rainfall !== null && data.rainfall !== undefined) {
             rainElem.innerText = data.rainfall;

@@ -41,7 +41,7 @@ flowchart LR
 | **Topik MQTT Sensor 2** | `data/temperature/area502/+` | Contoh: `data/temperature/area502/7122659134180131095` |
 | **Format Payload Sensor** | JSON Object | `{"_terminalTime":"YYYY-MM-DD HH:mm:ss.ms","_groupName":"Area_1","temper":"29.2","humidi":"49.7"}` |
 | **Visualisasi Dashboard** | Highcharts Radial Gauge | Pergerakan jarum instan (0 delay, animasi 400ms) & Indikator LED Alarm Berkedip |
-| **Integrasi Cuaca Luar** | Open-Meteo Forecast API | Deteksi Suhu Luar, Kelembapan, Curah Hujan, Kecepatan Angin (Status: `CERAH`, `MENDUNG`, `HUJAN`) |
+| **Integrasi Cuaca Luar** | Open-Meteo Forecast API | Deteksi Suhu Luar, Kelembapan, Tutupan Awan (Cloud Cover), Curah Hujan, Kecepatan Angin (Status: `CERAH`, `MENDUNG`, `HUJAN`) |
 | **Interval Penyimpanan DB** | **1 Jam Sekali (*Hourly Snapshot*)** | Dilindungi *Two-Tier Throttling Guard* (Frontend + Backend) |
 | **Format ID Transaksi** | `[id_location]_[YYYYMMDD_HH]0000` | Contoh: `501_20261110_080000` (temp_humid) dan `AOI5_WTR_20261110_080000` (weather_aoi5) |
 | **Web Server & Backend** | Apache / Nginx + PHP 7.4 / 8.x | Native PHP, cURL, MySQLi (*Zero Composer Dependency*) |
@@ -196,13 +196,12 @@ flowchart TD
 #### Aturan Klasifikasi Status Cuaca (Standar Pabrik Tanpa Icon)
 Sistem menggunakan klasifikasi bertingkat (*hierarchical classification*):
 1. **`HUJAN`** (Badge Biru / `.badge-primary`):
-   - Jika `rainfall > 0 mm`, atau
-   - Kode cuaca WMO berada pada kategori hujan/badai (`51–67`, `80–82`, `95–99`).
+   - Jika curah hujan terukur $\ge 1.0\text{ mm}$.
 2. **`MENDUNG`** (Badge Kuning / `.badge-warning`):
-   - Jika kode cuaca WMO berupa kabut/awan tebal (`2, 3, 45, 48`), atau
-   - Persentase tutupan awan (*cloud cover*) $\ge 50\%$.
+   - Jika terdapat curah hujan gerimis ringan ($> 0\text{ mm}$ s/d $< 1.0\text{ mm}$) atau kode WMO gerimis, atau
+   - Persentase tutupan awan (*cloud cover*) **melebihi 95% ($> 95\%$)**.
 3. **`CERAH`** (Badge Hijau / `.badge-success`):
-   - Jika tutupan awan $< 50\%$ dan kode cuaca cerah/sedikit berawan (`0, 1`).
+   - Jika curah hujan $0\text{ mm}$ dan tutupan awan $\le 95\%$ (termasuk kondisi cerah berawan / *partly cloudy* yang terik).
 
 > [!NOTE]
 > Modul cuaca beroperasi **100% tanpa file cache JSON** pada disk server. Seluruh validasi riwayat dan cache dibaca langsung dari tabel MySQL `weather_aoi5`, sehingga menjaga performa I/O server tetap bersih dan bebas resiko korupsi file.

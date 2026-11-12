@@ -18,15 +18,13 @@ if (!function_exists('classify_weather')) {
         }
         
         // Prioritas 2: Mendung
-        // - Curah hujan di bawah 10 mm (> 0 mm s/d < 10 mm tetap dalam kategori Mendung)
-        // - Atau terdapat kode WMO hujan/gerimis tapi curah hujan < 10 mm
-        // - Atau kode WMO berupa awan tebal / kabut
-        // - Atau persentase tutupan awan (cloud cover) >= 50%
-        if ($curah_hujan > 0 || in_array((int)$weather_code, $rain_codes) || in_array((int)$weather_code, $cloudy_codes) || intval($cloud_cover) >= 50) {
+        // - Curah hujan gerimis di bawah 1.0 mm (> 0 mm s/d < 1.0 mm) atau kode WMO gerimis
+        // - Atau persentase tutupan awan (cloud cover) melebihi 95% (> 95%)
+        if ($curah_hujan > 0 || in_array((int)$weather_code, $rain_codes) || intval($cloud_cover) > 95) {
             return 'Mendung';
         }
         
-        // Prioritas 3: Cerah (curah hujan 0 mm dan tutupan awan < 50%)
+        // Prioritas 3: Cerah (curah hujan 0 mm dan tutupan awan <= 95%)
         return 'Cerah';
     }
 }
@@ -193,8 +191,10 @@ if (!function_exists('sync_weather_aoi5')) {
                         $ins_res = @mysqli_query($conn, $insert_query);
                         if ($ins_res) {
                             $db_save_status = 'saved_success';
-                            // Sekaligus perbarui record lama jika masih ada yang tersimpan Hujan dengan curah hujan < 10 mm
+                            // Sekaligus perbarui record lama jika masih ada yang tersimpan Hujan dengan curah hujan < 1.0 mm
                             @mysqli_query($conn, "UPDATE weather_aoi5 SET weather_status = 'Mendung' WHERE rainfall < 1.0 AND weather_status = 'Hujan'");
+                            // Perbarui record lama jika tercatat Mendung padahal tutupan awan <= 95% dan tidak ada hujan
+                            @mysqli_query($conn, "UPDATE weather_aoi5 SET weather_status = 'Cerah' WHERE weather_status = 'Mendung' AND cloud_cover <= 95 AND (rainfall IS NULL OR rainfall = 0)");
                         } else {
                             $db_save_status = 'error: ' . mysqli_error($conn);
                         }
