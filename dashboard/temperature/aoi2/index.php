@@ -1,7 +1,7 @@
 <?php
 include '../../../config_temp_humid.php';
 
-$select_data = "SELECT * FROM realtime_th WHERE factory = 'AOI2' ORDER BY sequence ASC";
+$select_data = "SELECT * FROM realtime_th WHERE factory = 'AOI2' ORDER BY CAST(sequence AS UNSIGNED) ASC";
 $result_data = mysqli_query($conn, $select_data);
 
 ?>
@@ -128,7 +128,20 @@ $result_data = mysqli_query($conn, $select_data);
 		</table>
 		<div class="row my-3">
 			<!-- Start Card-->
-			<?php while($row_data = mysqli_fetch_assoc($result_data))
+			<?php 
+			$unique_locations = [];
+			$locations_list = [];
+			if ($result_data) {
+				while ($row = mysqli_fetch_assoc($result_data)) {
+					$loc_id = $row['id_location'];
+					if (!isset($unique_locations[$loc_id])) {
+						$unique_locations[$loc_id] = true;
+						$locations_list[] = $row;
+					}
+				}
+			}
+
+			foreach ($locations_list as $row_data)
 					{ 
 						$temp = $row_data['temp'];
 						$humidity = $row_data['humidity'];
@@ -136,33 +149,9 @@ $result_data = mysqli_query($conn, $select_data);
 						$id_location = $row_data['id_location'];
 						
 						//query standard value gauge
-						$select_standard = "SELECT * FROM master_standard WHERE id_location = '$id_location' ";
+						$select_standard = "SELECT * FROM master_standard WHERE id_location = '$id_location' LIMIT 1";
 						$result_standard = mysqli_query($conn, $select_standard);
-						$row_standard = mysqli_fetch_assoc($result_standard);
-						
-						//query chart temperature-> call temperature
-						$select_chart_temp = "SELECT temp FROM chart_th WHERE id_location = '$id_location' ";
-						$result_chart_temp = mysqli_query($conn, $select_chart_temp);
-						//query chart temperature-> call date
-						$select_chart_temp_date = "SELECT date_only FROM chart_th WHERE id_location = '$id_location' ";
-						$result_chart_temp_date = mysqli_query($conn, $select_chart_temp_date);
-						
-						//query chart humidity-> call humidity
-						$select_chart_hum = "SELECT humidity FROM chart_th WHERE id_location = '$id_location' ";
-						$result_chart_hum = mysqli_query($conn, $select_chart_hum);
-						//query chart humidity--> call date
-						$select_chart_hum_date = "SELECT date_only FROM chart_th WHERE id_location = '$id_location' ";
-						$result_chart_hum_date = mysqli_query($conn, $select_chart_hum_date);
-						
-						//query min and max value temperature chart
-						$select_m_temp = "SELECT MIN(temp) AS min_temp, MAX(temp) AS max_temp FROM chart_th WHERE id_location = '$id_location'";
-						$result_m_temp = mysqli_query($conn, $select_m_temp);
-						$row_m_temp = mysqli_fetch_assoc($result_m_temp);
-						
-						//query min and max value humidity chart
-						$select_m_hum = "SELECT MIN(humidity) AS min_hum, MAX(humidity) AS max_hum FROM chart_th WHERE id_location = '$id_location'";
-						$result_m_hum = mysqli_query($conn, $select_m_hum);
-						$row_m_hum = mysqli_fetch_assoc($result_m_hum);
+						$row_standard = ($result_standard && mysqli_num_rows($result_standard) > 0) ? mysqli_fetch_assoc($result_standard) : [];
 						
 						?>
 						<div class="col-md-3">
@@ -198,19 +187,19 @@ $result_data = mysqli_query($conn, $select_data);
 						<script>
 						// Store standard values globally
 						standard_values[<?php echo $id_location ;?>] = {
-							'min_value_temp': <?php echo floatval($row_standard['min_value_temp']); ?>,
-							'max_red_temp': <?php echo floatval($row_standard['max_red_temp']); ?>,
-							'max_yellow1_temp': <?php echo floatval($row_standard['max_yellow1_temp']); ?>,
-							'max_green_temp': <?php echo floatval($row_standard['max_green_temp']); ?>,
-							'max_yellow2_temp': <?php echo floatval($row_standard['max_yellow2_temp']); ?>,
-							'max_value_temp': <?php echo floatval($row_standard['max_value_temp']); ?>,
-							'min_value_hum': <?php echo floatval($row_standard['min_value_hum']); ?>,
-							'max_green_hum': <?php echo floatval($row_standard['max_green_hum']); ?>,
-							'max_yellow2_hum': <?php echo floatval($row_standard['max_yellow2_hum']); ?>,
-							'max_value_hum': <?php echo floatval($row_standard['max_value_hum']); ?>
+							'min_value_temp': <?php echo isset($row_standard['min_value_temp']) ? floatval($row_standard['min_value_temp']) : 10; ?>,
+							'max_red_temp': <?php echo isset($row_standard['max_red_temp']) ? floatval($row_standard['max_red_temp']) : 15; ?>,
+							'max_yellow1_temp': <?php echo isset($row_standard['max_yellow1_temp']) ? floatval($row_standard['max_yellow1_temp']) : 18; ?>,
+							'max_green_temp': <?php echo isset($row_standard['max_green_temp']) ? floatval($row_standard['max_green_temp']) : 25; ?>,
+							'max_yellow2_temp': <?php echo isset($row_standard['max_yellow2_temp']) ? floatval($row_standard['max_yellow2_temp']) : 27; ?>,
+							'max_value_temp': <?php echo isset($row_standard['max_value_temp']) ? floatval($row_standard['max_value_temp']) : 40; ?>,
+							'min_value_hum': <?php echo isset($row_standard['min_value_hum']) ? floatval($row_standard['min_value_hum']) : 0; ?>,
+							'max_green_hum': <?php echo isset($row_standard['max_green_hum']) ? floatval($row_standard['max_green_hum']) : 65; ?>,
+							'max_yellow2_hum': <?php echo isset($row_standard['max_yellow2_hum']) ? floatval($row_standard['max_yellow2_hum']) : 75; ?>,
+							'max_value_hum': <?php echo isset($row_standard['max_value_hum']) ? floatval($row_standard['max_value_hum']) : 100; ?>
 						};
 
-						let temp_now_<?php echo $id_location ;?> = <?php echo $temp ;?>;
+						let temp_now_<?php echo $id_location ;?> = <?php echo (is_numeric($temp) ? floatval($temp) : 0); ?>;
 						// Update LED on initial load
 						updateLED('led_temp_<?php echo $id_location ;?>', isTempInRedZone(temp_now_<?php echo $id_location ;?>, <?php echo $id_location ;?>));
 						
@@ -264,32 +253,32 @@ $result_data = mysqli_query($conn, $select_data);
 								},
 								plotBands: [
 								{
-									from: <?php echo $row_standard['min_value_temp'];?>,
-									to: <?php echo $row_standard['max_red_temp'];?>,
+									from: <?php echo isset($row_standard['min_value_temp']) ? floatval($row_standard['min_value_temp']) : 10;?>,
+									to: <?php echo isset($row_standard['max_red_temp']) ? floatval($row_standard['max_red_temp']) : 15;?>,
 									color: 'red', // red
 									thickness: 20
 								}, 
 								{
-									from: <?php echo $row_standard['max_red_temp'];?>,
-									to: <?php echo $row_standard['max_yellow1_temp'];?>,
+									from: <?php echo isset($row_standard['max_red_temp']) ? floatval($row_standard['max_red_temp']) : 15;?>,
+									to: <?php echo isset($row_standard['max_yellow1_temp']) ? floatval($row_standard['max_yellow1_temp']) : 18;?>,
 									color: 'yellow', // yellow
 									thickness: 20
 								}, 
 								{
-									from: <?php echo $row_standard['max_yellow1_temp'];?>,
-									to: <?php echo $row_standard['max_green_temp'];?>,
+									from: <?php echo isset($row_standard['max_yellow1_temp']) ? floatval($row_standard['max_yellow1_temp']) : 18;?>,
+									to: <?php echo isset($row_standard['max_green_temp']) ? floatval($row_standard['max_green_temp']) : 25;?>,
 									color: 'green', // green
 									thickness: 20
 								}, 
 								{
-									from: <?php echo $row_standard['max_green_temp'];?>,
-									to: <?php echo $row_standard['max_yellow2_temp'];?>,
+									from: <?php echo isset($row_standard['max_green_temp']) ? floatval($row_standard['max_green_temp']) : 25;?>,
+									to: <?php echo isset($row_standard['max_yellow2_temp']) ? floatval($row_standard['max_yellow2_temp']) : 27;?>,
 									color: 'yellow', // yellow
 									thickness: 20
 								}, 
 								{
-									from: <?php echo $row_standard['max_yellow2_temp'];?>,
-									to: <?php echo $row_standard['max_value_temp'];?>,
+									from: <?php echo isset($row_standard['max_yellow2_temp']) ? floatval($row_standard['max_yellow2_temp']) : 27;?>,
+									to: <?php echo isset($row_standard['max_value_temp']) ? floatval($row_standard['max_value_temp']) : 40;?>,
 									color: 'red', // red
 									thickness: 20
 								}]
@@ -347,7 +336,7 @@ $result_data = mysqli_query($conn, $select_data);
 						
 						<!-- Gauge Humidity -->
 						<script>
-						let hum_now_<?php echo $id_location ;?> = <?php echo $humidity ;?>;
+						let hum_now_<?php echo $id_location ;?> = <?php echo (is_numeric($humidity) ? floatval($humidity) : 0); ?>;
 						// Update LED on initial load
 						updateLED('led_hum_<?php echo $id_location ;?>', isHumInRedZone(hum_now_<?php echo $id_location ;?>, <?php echo $id_location ;?>));
 						
@@ -400,33 +389,21 @@ $result_data = mysqli_query($conn, $select_data);
 									}
 								},
 								plotBands: [
-								// {
-									// from: <?php echo $row_standard['min_value_hum'];?>,
-									// to: <?php echo $row_standard['max_red_hum'];?>,
-									// color: 'red', // green
-									// thickness: 20
-								// }, 
-								// {
-									// from: <?php echo $row_standard['max_red_hum'];?>,
-									// to: <?php echo $row_standard['max_yellow1_hum'];?>,
-									// color: 'yellow', // yellow
-									// thickness: 20
-								// }, 
 								{
-									from: <?php echo $row_standard['min_value_hum'];?>,
-									to: <?php echo $row_standard['max_green_hum'];?>,
+									from: <?php echo isset($row_standard['min_value_hum']) ? floatval($row_standard['min_value_hum']) : 0;?>,
+									to: <?php echo isset($row_standard['max_green_hum']) ? floatval($row_standard['max_green_hum']) : 65;?>,
 									color: 'green', // red
 									thickness: 20
 								}, 
 								{
-									from: <?php echo $row_standard['max_green_hum'];?>,
-									to: <?php echo $row_standard['max_yellow2_hum'];?>,
+									from: <?php echo isset($row_standard['max_green_hum']) ? floatval($row_standard['max_green_hum']) : 65;?>,
+									to: <?php echo isset($row_standard['max_yellow2_hum']) ? floatval($row_standard['max_yellow2_hum']) : 75;?>,
 									color: 'yellow', // red
 									thickness: 20
 								}, 
 								{
-									from: <?php echo $row_standard['max_yellow2_hum'];?>,
-									to: <?php echo $row_standard['max_value_hum'];?>,
+									from: <?php echo isset($row_standard['max_yellow2_hum']) ? floatval($row_standard['max_yellow2_hum']) : 75;?>,
+									to: <?php echo isset($row_standard['max_value_hum']) ? floatval($row_standard['max_value_hum']) : 100;?>,
 									color: 'red', // red
 									thickness: 20
 								}]
@@ -550,8 +527,12 @@ $result_data = mysqli_query($conn, $select_data);
 			var val_temp = Math.round(parseFloat(content_temp)* 10) / 10;
 			var val_hum = Math.round(parseFloat(content_hum)* 10) / 10;
 			
-			gauge_temp[content_loc](val_temp);
-			gauge_hum[content_loc](val_hum);
+			if (typeof gauge_temp[content_loc] === 'function') {
+				gauge_temp[content_loc](val_temp);
+			}
+			if (typeof gauge_hum[content_loc] === 'function') {
+				gauge_hum[content_loc](val_hum);
+			}
 			
 			i++;
 		};
@@ -562,7 +543,7 @@ $result_data = mysqli_query($conn, $select_data);
 	}
 	function onConnected(recon,url)
 	{
-		console.log(" in onConnected " +reconn);
+		console.log(" in onConnected " +recon);
 	}
 	
 	function onConnect() 

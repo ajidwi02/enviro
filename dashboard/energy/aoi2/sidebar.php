@@ -1,5 +1,6 @@
 <?php
 $currentPage = basename($_SERVER['PHP_SELF']);
+$isReportPage = (strpos($_SERVER['PHP_SELF'], '/report/energy/aoi2/') !== false);
 ?>
 <div id="sidebar" class="sidebar">
     <div class="sidebar-header">
@@ -15,6 +16,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <li>
             <a href="plts.php" class="<?= ($currentPage == 'plts.php') ? 'active' : '' ?>">
                 <span>☀️</span> PLTS
+            </a>
+        </li>
+        <li>
+            <a href="../../../report/energy/aoi2/index.php" class="<?= $isReportPage ? 'active' : '' ?>">
+                <span>📊</span> Report
             </a>
         </li>
     </ul>

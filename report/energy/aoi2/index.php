@@ -1,23 +1,53 @@
 <?php
 	include '../../../config_electricity.php';
-	
+
+	// Ambil daftar panel untuk dropdown filter (khusus AOI2)
+	$query_panels = "SELECT id_location, location_name FROM loc_electricity WHERE factory = 'AOI2' ORDER BY location_name ASC";
+	$result_panels = mysqli_query($mysqli, $query_panels);
+
+	// Menangkap input filter
+	$selected_panel = isset($_GET['panel']) ? $_GET['panel'] : 'all';
+	$range_input    = isset($_GET['range']) ? $_GET['range'] : '';
+
+	// Base kondisi tambahan untuk panel
+	$panel_condition = "";
+	if ($selected_panel !== 'all' && !empty($selected_panel)) {
+		$safe_panel = mysqli_real_escape_string($mysqli, $selected_panel);
+		$panel_condition = " AND e.id_location = '$safe_panel'";
+	}
+
 	if(isset($_GET["submit"]))
 	{
-		$aRanges = explode(' to ', $_GET['range']);
-		$range1 = $aRanges[0];
-		$range2 = $aRanges[1];
+		$aRanges = explode(' to ', $range_input);
+		$range1 = isset($aRanges[0]) ? $aRanges[0] : date('Y-m-d');
+		$range2 = isset($aRanges[1]) ? $aRanges[1] : $range1;
 		$from = date("d M Y", strtotime($range1));
 		$to = date("d M Y", strtotime($range2));
 
-		$report = "SELECT factory, location, power, kwh, datetime, date_only FROM report_electricity WHERE date_only is not null AND date_only between '$range1' and '$range2' ORDER BY date_only DESC, id_location ASC";
+		$report = "SELECT l.factory, l.location_name AS location, ABS(e.power) AS power, e.kwh, e.consumpt, DATE_FORMAT(e.datenow, '%d-%b-%y %H:%i:%s') AS datetime, DATE_FORMAT(e.datenow, '%Y-%m-%d %H:%i:%s') AS date_only 
+		           FROM electricity e 
+		           JOIN loc_electricity l ON l.id_location = e.id_location 
+		           WHERE e.datenow IS NOT NULL 
+		             AND l.factory = 'AOI2' 
+		             AND e.datenow >= '$range1 00:00:00' 
+		             AND e.datenow < DATE_ADD('$range2', INTERVAL 1 DAY) 
+		             {$panel_condition}
+		           ORDER BY e.datenow DESC, e.id_location ASC";
 		$result_report = mysqli_query($mysqli, $report);
 
 	} else
 	{
-		$report = "SELECT factory, location, power, kwh, datetime, date_only FROM report_electricity WHERE date_only is not null AND date_only >= now()-interval 1 month ORDER BY date_only DESC, id_location ASC";
+		$report = "SELECT l.factory, l.location_name AS location, ABS(e.power) AS power, e.kwh, e.consumpt, DATE_FORMAT(e.datenow, '%d-%b-%y %H:%i:%s') AS datetime, DATE_FORMAT(e.datenow, '%Y-%m-%d %H:%i:%s') AS date_only 
+		           FROM electricity e 
+		           JOIN loc_electricity l ON l.id_location = e.id_location 
+		           WHERE e.datenow IS NOT NULL 
+		             AND l.factory = 'AOI2' 
+		             AND e.datenow >= NOW() - INTERVAL 1 MONTH 
+		             {$panel_condition}
+		           ORDER BY e.datenow DESC, e.id_location ASC";
 		$result_report = mysqli_query($mysqli, $report);
 	}
-;?>
+	;?>
 
 <!doctype html>
 <html lang="en">
@@ -45,6 +75,23 @@
             .dt-buttons{
                 width: 100%;
             }
+            .report-electricity-table {
+                table-layout: fixed;
+                width: 100%;
+                min-width: 900px;
+            }
+            .report-electricity-table th,
+            .report-electricity-table td {
+                vertical-align: middle;
+            }
+            .report-electricity-table th.text-nowrap,
+            .report-electricity-table td.text-nowrap {
+                white-space: nowrap;
+            }
+            .report-electricity-table td:nth-child(3) {
+                white-space: normal;
+                word-break: break-word;
+            }
     </style>
 	<script src="../../../js/jquery.dataTables.min.js"></script>
 	<script src="../../../js/datatables.buttons.min.js"></script>
@@ -56,6 +103,7 @@
             var empDataTable = $('#dataTable-2').DataTable({
                 dom: 'Blfrtip',
 				lengthMenu: [100, 500, 1000],
+				autoWidth: false,
                 buttons: [
                     {
                         extend: 'csv'
@@ -151,53 +199,85 @@
 
 						<div class="form-group">
 							<form method="GET" action="">
-								<div class="input-group mb-3">
-									<input id="reportrange" name="range" type="text" placeholder="Select Range" class="form-control" aria-describedby="button-addon2">
-									<div class="input-group-append">
-									  <input class="btn btn-primary" type="submit" id="submit" name="submit" value="Filter Range Tanggal">
+								<div class="form-row align-items-center">
+									<!-- Dropdown Select Panel -->
+									<div class="col-md-4 mb-2">
+										<select name="panel" class="form-control" id="panelSelect">
+											<option value="all">-- Semua Panel (All Panels) --</option>
+											<?php 
+											// Reset pointer jika diperlukan atau loop ulang hasil query_panels
+											mysqli_data_seek($result_panels, 0);
+											while($row_p = mysqli_fetch_assoc($result_panels)) {
+												$sel = ($selected_panel == $row_p['id_location']) ? 'selected' : '';
+												echo '<option value="'.$row_p['id_location'].'" '.$sel.'>'.$row_p['location_name'].'</option>';
+											}
+											?>
+										</select>
 									</div>
-									<span></span>
+									<!-- Input Date Range -->
+									<div class="col-md-6 mb-2">
+										<input id="reportrange" name="range" type="text" value="<?php echo htmlspecialchars($range_input); ?>" placeholder="Select Range" class="form-control">
+									</div>
+									<!-- Tombol Submit -->
+									<div class="col-md-2 mb-2">
+										<input class="btn btn-primary btn-block" type="submit" id="submit" name="submit" value="Filter Data">
+									</div>
 								</div>
 							</form>
 						</div>
 
 						<!-- Start Table -->
-						<table class="table datatables" id="dataTable-2" >
-							<thead>
-							  <tr>
-								<th>No</th>
-								<th>Factory</th>
-								<th>Location</th>
-								<th>Power (KW)</th>
-								<th>KWH</th>
-								<th>Record Time</th>
-							  </tr>
-							</thead>
-							<tbody>
-							<?php while($row_report = mysqli_fetch_assoc($result_report))
-									{	$factory = $row_report['factory'];
-										$location_name = $row_report['location'];
-										$power = $row_report['power'];
-										$kwh = $row_report['kwh'];
-										$record_time = $row_report['datetime'];
-										
-										?>
-										<tr>
-											<td></td>
-											<td><?php echo $factory;?></td>
-											<td><?php echo $location_name;?></td>
-											<td><?php echo number_format($power) ;?></td>
-											<td><?php echo number_format($kwh) ;?></td>
-											<td><?php echo $record_time ;?></td>
-										</tr>
-							<?php 	};?>
-							</tbody>
-						</table>
+						<div class="table-responsive">
+							<table class="table datatables report-electricity-table" id="dataTable-2">
+								<colgroup>
+									<col style="width: 4%;">
+									<col style="width: 9%;">
+									<col style="width: 24%;">
+									<col style="width: 10%;">
+									<col style="width: 16%;">
+									<col style="width: 16%;">
+									<col style="width: 21%;">
+								</colgroup>
+								<thead>
+								  <tr>
+									<th class="text-center">No</th>
+									<th>Factory</th>
+									<th>Location</th>
+									<th class="text-right">Power (KW)</th>
+									<th class="text-right">KWH</th>
+									<th class="text-right" title="Pemakaian kWh sejak record sebelumnya">Consumpt (KWH)</th>
+									<th>Record Time</th>
+								  </tr>
+								</thead>
+								<tbody>
+								<?php while($row_report = mysqli_fetch_assoc($result_report))
+										{	$factory = $row_report['factory'];
+											$location_name = $row_report['location'];
+											$power = $row_report['power'];
+											$kwh = $row_report['kwh'];
+											$consumpt = $row_report['consumpt'];
+											$record_time = $row_report['datetime'];
+											$consumpt_display = ($consumpt === null || $consumpt === '') ? '-' : number_format((float)$consumpt, 2);
+
+											?>
+											<tr>
+												<td class="text-center"></td>
+												<td><?php echo $factory;?></td>
+												<td><?php echo $location_name;?></td>
+												<td class="text-right text-nowrap"><?php echo number_format($power) ;?></td>
+												<td class="text-right text-nowrap"><?php echo number_format($kwh) ;?></td>
+												<td class="text-right text-nowrap"><?php echo $consumpt_display;?></td>
+												<td class="text-nowrap"><?php echo $record_time ;?></td>
+											</tr>
+								<?php 	};?>
+								</tbody>
+							</table>
+						</div>
 						<!-- End Table -->
 
                     </div> <!-- /.col -->
 					</div>
-                    <!-- End Data -->
+                     <!-- End Data -->
 
                   </div> <!-- .card-body -->
                 </div> <!-- .card -->
@@ -208,7 +288,7 @@
       </main> <!-- main -->
 	  <!-- End Content -->
     </div> <!-- .wrapper -->
-	
+
 	<script src="../../../js/moment.min.js"></script>
 	<script src="../../../js/popper.min.js"></script>
 	<script src="../../../js/config.js"></script>
