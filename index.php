@@ -43,7 +43,7 @@
           <span class="mu-brand__name">Environment</span>
         </a>
 
-        <span class="mu-topbar__section">Menu Utama</span>
+        <span class="mu-topbar__section">© 2026 Automation - Operation Excellence</span>
       </nav>
 	  <!-- End Nav Bar -->
 
