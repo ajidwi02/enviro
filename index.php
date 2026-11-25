@@ -1,6 +1,7 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
   <head>
+    <script>document.documentElement.classList.add('mu-js');</script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="">
@@ -15,6 +16,7 @@
     <link rel="stylesheet" href="css/feather.css">
     <!-- App CSS -->
     <link rel="stylesheet" href="css/app-light.css" id="lightTheme">
+    <link rel="stylesheet" href="css/menu-utama.css?v=<?= filemtime(__DIR__ . '/css/menu-utama.css') ?>">
 
 	<script src="js/jquery.min.js"></script>
 	<script src="js/bootstrap.min.js"></script>
@@ -22,21 +24,31 @@
 
 
   </head>
-  <body class="vertical  light">
+  <body class="vertical light mu-page">
     <div class="wrapper">
 	  <!-- Start Nav Bar -->
-      <nav class="topnav navbar navbar-light">
-		  <span class="avatar avatar-sm mt-2">
-
+      <nav class="topnav navbar navbar-light" aria-label="Bilah atas">
+        <button type="button" class="mu-nav-toggle" id="muNavToggle"
+                aria-controls="leftSidebar" aria-expanded="false"
+                aria-label="Buka menu navigasi">
+          <span class="mu-nav-toggle__box" aria-hidden="true">
+            <span class="mu-nav-toggle__line"></span>
+            <span class="mu-nav-toggle__line"></span>
+            <span class="mu-nav-toggle__line"></span>
           </span>
+        </button>
+
+        <a class="mu-brand" href="index.php">
+          <span class="mu-brand__dot" aria-hidden="true"></span>
+          <span class="mu-brand__name">Environment</span>
+        </a>
+
+        <span class="mu-topbar__section">Menu Utama</span>
       </nav>
 	  <!-- End Nav Bar -->
 
 	  <!-- Start Side Bar -->
-      <aside class="sidebar-left border-right bg-white shadow" id="leftSidebar" data-simplebar>
-		<a href="#" class="btn collapseSidebar toggle-btn d-lg-none text-muted ml-2 mt-3" data-toggle="toggle">
-		  <i class="fe fe-x"><span class="sr-only"></span></i>
-		</a>
+      <aside class="sidebar-left border-right bg-white" id="leftSidebar" data-simplebar aria-label="Navigasi utama">
 		<nav class="vertnav navbar navbar-light">
 		  <!-- Start Logo -->
 		  <div class="w-100 mb-3 text-center d-flex flex-column align-items-center justify-content-center pt-2 pb-2">
@@ -197,37 +209,129 @@
 	</aside>
 	  <!-- End Side Bar -->
 
-	  <!-- Start Content -->
-      <main role="main" class="main-content">
-        <div class="container-fluid">
-          <div class="row justify-content-center">
-            <div class="col-12">
-              <div class="row align-items-center mb-2">
-                <div class="col">
-                  <h2 class="h5 page-title">Menu Utama</h2>
+	  <div class="mu-nav-scrim" data-role="nav-scrim" aria-hidden="true"></div>
+
+<!-- Start Content -->
+<?php
+$slots_menu = require __DIR__ . '/config/menu_utama.php';
+
+function mu_e($value)
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+?>
+<main role="main" class="main-content">
+  <div class="mu-board">
+    <div class="mu-board__grid">
+
+      <div class="mu-tiles">
+        <?php foreach ($slots_menu as $slot): ?>
+          <?php $has_url = !empty($slot['url']); ?>
+          <article class="mu-card"
+                   data-id="<?= mu_e($slot['id']) ?>"
+                   data-state="<?= $has_url ? 'loading' : 'empty' ?>"
+                   data-design-width="<?= (int) $slot['design_width'] ?>"
+                   <?= $has_url ? 'data-src="' . mu_e($slot['url']) . '"' : '' ?>
+                   aria-label="<?= mu_e(($has_url ? 'Pratinjau ' : '') . $slot['title'] . ' ' . $slot['area'] . ($has_url ? '' : ' belum terpasang')) ?>">
+
+            <header class="mu-card__head">
+              <span class="mu-dot" aria-hidden="true"></span>
+              <span class="mu-card__id">
+                <span class="mu-card__title"><?= mu_e($slot['title']) ?></span>
+                <span class="mu-card__area"><?= mu_e($slot['area']) ?></span>
+              </span>
+              <?php if ($has_url): ?>
+                <a class="mu-card__open"
+                   href="<?= mu_e($slot['url']) ?>"
+                   target="_blank" rel="noopener"
+                   aria-label="Buka <?= mu_e($slot['title'] . ' ' . $slot['area']) ?> di tab baru"
+                   title="Buka <?= mu_e($slot['title'] . ' ' . $slot['area']) ?> di tab baru">
+                  <i class="fe fe-external-link" aria-hidden="true"></i>
+                </a>
+              <?php endif; ?>
+            </header>
+
+            <div class="mu-card__view">
+              <?php if ($has_url): ?>
+                <iframe class="mu-frame"
+                        title="Pratinjau live <?= mu_e($slot['title'] . ' ' . $slot['area']) ?>"
+                        tabindex="-1" aria-hidden="true" scrolling="no"
+                        sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
+                <div class="mu-state mu-state--loading">
+                  <p class="mu-state__title">Memuat dashboard…</p>
                 </div>
-              </div>
-              <div class="mb-2 align-items-center">
-                <div class="card shadow mb-4">
-                  <div class="card-body">
+                <div class="mu-state mu-state--error">
+                  <p class="mu-state__title">Dashboard tidak merespons</p>
+                  <p class="mu-state__body">Periksa koneksi jaringan, lalu muat ulang.</p>
+                  <button type="button" class="mu-btn mu-state__action" data-action="reload">Muat ulang</button>
+                </div>
+              <?php else: ?>
+                <div class="mu-state mu-state--empty">
+                  <p class="mu-state__title">Belum terpasang</p>
+                  <p class="mu-state__body">Dashboard ini belum dihubungkan ke menu utama.</p>
+                </div>
+              <?php endif; ?>
+            </div>
 
-					<!-- Start Data -->
-					<div class="row">
-                    <div class="col-md-12">
+            <footer class="mu-card__foot">
+              <span class="mu-card__loaded" data-role="loaded"></span>
+              <span class="mu-card__state" data-role="status"><?= $has_url ? 'Memuat' : 'Kosong' ?></span>
+            </footer>
+          </article>
+        <?php endforeach; ?>
+      </div>
 
+      <aside class="mu-rail">
+        <section class="mu-panel mu-rail__clock" aria-label="Waktu saat ini">
+          <h1 class="mu-panel__title">Menu utama</h1>
+          <p class="mu-clock"><time id="mu-clock" datetime="">--:--:--</time></p>
+          <p class="mu-date"><time id="mu-date">—</time></p>
+        </section>
 
+        <section class="mu-panel mu-panel--grow" aria-labelledby="mu-summary-title">
+          <div class="mu-summary__head">
+            <h2 class="mu-section-title" id="mu-summary-title">Ringkasan monitor</h2>
+          </div>
 
-                    </div> <!-- /.col -->
-					</div>
-                    <!-- End Data -->
+          <div class="mu-chips" aria-live="off">
+            <span class="mu-chip mu-chip--ok" data-chip="online">
+              <span class="mu-dot" aria-hidden="true"></span>
+              <span data-role="count-online">— aktif</span>
+            </span>
+            <span class="mu-chip mu-chip--warn" data-chip="loading" hidden>
+              <span class="mu-dot" aria-hidden="true"></span>
+              <span data-role="count-loading">— memuat</span>
+            </span>
+            <span class="mu-chip mu-chip--danger" data-chip="error" hidden>
+              <span class="mu-dot" aria-hidden="true"></span>
+              <span data-role="count-error">— gagal</span>
+            </span>
+            <span class="mu-chip mu-chip--muted" data-chip="empty" hidden>
+              <span class="mu-dot" aria-hidden="true"></span>
+              <span data-role="count-empty">— kosong</span>
+            </span>
+          </div>
 
-                  </div> <!-- .card-body -->
-                </div> <!-- .card -->
-              </div>
-            </div> <!-- .col-12 -->
-          </div> <!-- .row -->
-        </div> <!-- .container-fluid -->
-      </main> <!-- main -->
+          <ul class="mu-list">
+            <?php foreach ($slots_menu as $slot): ?>
+              <li class="mu-list__row"
+                  data-slot="<?= mu_e($slot['id']) ?>"
+                  data-state="<?= $slot['url'] ? 'loading' : 'empty' ?>">
+                <span class="mu-dot" aria-hidden="true"></span>
+                <span class="mu-list__label">
+                  <span class="mu-list__title"><?= mu_e($slot['title']) ?></span>
+                  <span class="mu-list__area"><?= mu_e($slot['area']) ?></span>
+                </span>
+                <span class="mu-list__state" data-role="summary-status"><?= $slot['url'] ? 'Memuat' : 'Kosong' ?></span>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </section>
+      </aside>
+
+    </div>
+  </div>
+</main>
 	  <!-- End Content -->
     </div> <!-- .wrapper -->
     <script src="js/popper.min.js"></script>
@@ -421,5 +525,6 @@
         }
       })();
     </script>
+    <script src="js/menu-utama.js?v=<?= filemtime(__DIR__ . '/js/menu-utama.js') ?>" defer></script>
   </body>
 </html>
